@@ -1,0 +1,2010 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema de Férias – Hospital Municipal de Cordeiro</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --azul:#1F4E79;--azul-m:#2E75B6;--azul-c:#D6E4F0;
+  --verde:#375623;--verde-c:#E2EFDA;
+  --vermelho:#C00000;--vermelho-c:#FFEBEB;
+  --laranja:#7F6000;--laranja-c:#FFF2CC;
+  --roxo:#4A0070;--roxo-c:#EAD1FF;
+  --cinza:#595959;--cinza-c:#F2F2F2;
+  --borda:#E0E0E0;--fundo:#F7F9FC;--branco:#fff;
+  --texto:#1a1a1a;--texto2:#555;
+  --radius:8px;--radius-lg:12px;
+  --shadow:0 2px 8px rgba(0,0,0,.08);
+}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--fundo);color:var(--texto);font-size:14px;min-height:100vh}
+
+/* LAYOUT */
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:var(--azul);display:flex;flex-direction:column;z-index:50}
+.sidebar-logo{padding:20px 16px 16px;border-bottom:1px solid rgba(255,255,255,.15)}
+.sidebar-logo h1{color:#fff;font-size:14px;font-weight:600;line-height:1.3}
+.sidebar-logo p{color:rgba(255,255,255,.6);font-size:11px;margin-top:3px}
+.sidebar-nav{flex:1;overflow-y:auto;padding:8px 0}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;color:rgba(255,255,255,.75);cursor:pointer;font-size:13px;transition:all .15s;border-left:3px solid transparent}
+.nav-item:hover{background:rgba(255,255,255,.1);color:#fff}
+.nav-item.active{background:rgba(255,255,255,.15);color:#fff;border-left-color:#fff;font-weight:600}
+.nav-item svg{width:18px;height:18px;flex-shrink:0}
+.nav-section{padding:16px 16px 6px;color:rgba(255,255,255,.4);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.main{margin-left:220px;min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:var(--branco);border-bottom:1px solid var(--borda);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40}
+.topbar h2{font-size:16px;font-weight:600;color:var(--azul)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.content{padding:24px;flex:1}
+
+/* CARDS STAT */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:var(--branco);border:1px solid var(--borda);border-radius:var(--radius-lg);padding:14px 16px;display:flex;align-items:center;gap:12px}
+.stat-icon{width:42px;height:42px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.stat-icon svg{width:22px;height:22px}
+.stat-n{font-size:24px;font-weight:700;line-height:1}
+.stat-l{font-size:11px;color:var(--texto2);margin-top:3px}
+
+/* TOOLBAR */
+.toolbar{background:var(--branco);border:1px solid var(--borda);border-radius:var(--radius-lg);padding:12px 16px;margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.search-wrap{position:relative;flex:1;min-width:200px}
+.search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--texto2);pointer-events:none}
+input[type=text],input[type=date],input[type=number],select,textarea{height:36px;border:1px solid var(--borda);border-radius:var(--radius);background:#fff;color:var(--texto);font-size:13px;font-family:inherit;transition:border .15s,box-shadow .15s}
+input[type=text]:focus,input[type=date]:focus,input[type=number]:focus,select:focus,textarea:focus{outline:none;border-color:var(--azul-m);box-shadow:0 0 0 3px rgba(46,117,182,.12)}
+.search-input{width:100%;padding:0 10px 0 34px}
+select{padding:0 30px 0 10px;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:0 14px;height:36px;border-radius:var(--radius);border:1px solid var(--borda);background:var(--branco);color:var(--texto);cursor:pointer;font-size:13px;font-family:inherit;font-weight:500;transition:all .15s;white-space:nowrap}
+.btn:hover{background:var(--cinza-c);border-color:#ccc}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--azul);color:#fff;border-color:var(--azul)}
+.btn-primary:hover{background:#185090;border-color:#185090}
+.btn-success{background:var(--verde);color:#fff;border-color:var(--verde)}
+.btn-success:hover{background:#2d4a1e}
+.btn-danger{background:var(--vermelho);color:#fff;border-color:var(--vermelho)}
+.btn-danger:hover{background:#a00000}
+.btn-sm{height:28px;padding:0 10px;font-size:12px}
+.btn svg{width:15px;height:15px}
+
+/* TABLE */
+.tbl-wrap{background:var(--branco);border:1px solid var(--borda);border-radius:var(--radius-lg);overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead tr{background:#F0F4F8}
+th{padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--texto2);border-bottom:1px solid var(--borda);white-space:nowrap;text-transform:uppercase;letter-spacing:.04em}
+td{padding:10px 12px;border-bottom:1px solid var(--borda);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#FAFCFF}
+.col-name{font-weight:600;color:var(--azul)}
+.col-act{width:1%;white-space:nowrap}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.badge-red{background:var(--vermelho-c);color:var(--vermelho)}
+.badge-orange{background:var(--laranja-c);color:var(--laranja)}
+.badge-purple{background:var(--roxo-c);color:var(--roxo)}
+.badge-gray{background:var(--cinza-c);color:var(--cinza)}
+.badge-green{background:var(--verde-c);color:var(--verde)}
+.badge-blue{background:var(--azul-c);color:var(--azul)}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:200;padding:16px}
+.modal{background:var(--branco);border-radius:var(--radius-lg);width:100%;max-width:620px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-header{padding:20px 24px 16px;border-bottom:1px solid var(--borda);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;position:sticky;top:0;background:var(--branco);z-index:1}
+.modal-header h3{font-size:16px;font-weight:600;color:var(--azul)}
+.modal-header p{font-size:12px;color:var(--texto2);margin-top:2px}
+.modal-body{padding:20px 24px}
+.modal-footer{padding:14px 24px;border-top:1px solid var(--borda);display:flex;gap:8px;justify-content:flex-end;position:sticky;bottom:0;background:var(--branco)}
+.close-btn{background:none;border:none;cursor:pointer;color:var(--texto2);padding:4px;border-radius:6px;display:flex;align-items:center;justify-content:center}
+.close-btn:hover{background:var(--cinza-c);color:var(--texto)}
+.close-btn svg{width:20px;height:20px}
+
+/* FORM */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-grid.cols-1{grid-template-columns:1fr}
+.form-grid.cols-3{grid-template-columns:1fr 1fr 1fr}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:12px;font-weight:600;color:var(--texto2)}
+.field input,.field select,.field textarea{width:100%;padding:0 10px}
+.field textarea{height:72px;padding:8px 10px;resize:vertical;line-height:1.5}
+.field-note{font-size:11px;color:var(--texto2);margin-top:2px}
+.field input.readonly-field{background:#F7F9FC;color:var(--texto2)}
+.required::after{content:' *';color:var(--vermelho)}
+.section-title{font-size:12px;font-weight:700;color:var(--azul);text-transform:uppercase;letter-spacing:.06em;margin:16px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--azul-c)}
+
+/* ALERT BOX */
+.alert{border-radius:var(--radius);padding:10px 14px;font-size:12px;margin-bottom:14px;display:flex;gap:8px;align-items:flex-start}
+.alert svg{width:16px;height:16px;flex-shrink:0;margin-top:1px}
+.alert-danger{background:var(--vermelho-c);color:#7a0000;border:1px solid #FFBBBB}
+.alert-warn{background:var(--laranja-c);color:#5a4200;border:1px solid #FFD980}
+.alert-info{background:var(--azul-c);color:#103360;border:1px solid #9DC3E6}
+.alert-success{background:var(--verde-c);color:var(--verde);border:1px solid #B4D89A}
+
+/* DOC PREVIEW */
+.doc-box{background:#FAFAFA;border:1px solid var(--borda);border-radius:var(--radius);padding:16px;font-size:12px;line-height:1.8;white-space:pre-wrap;font-family:'Courier New',monospace;max-height:320px;overflow-y:auto}
+
+/* OFÍCIO VIEW */
+.oficio-wrap{background:#fff;border:1px solid var(--borda);border-radius:var(--radius-lg);padding:40px;max-width:700px;margin:0 auto;font-family:'Times New Roman',serif;font-size:13px;line-height:1.8}
+.oficio-wrap h2{text-align:center;font-size:15px;text-transform:uppercase;margin-bottom:4px}
+.oficio-wrap .sub-h{text-align:center;font-size:12px;margin-bottom:24px}
+
+/* TABS */
+.tabs{display:flex;gap:2px;border-bottom:2px solid var(--azul-c);margin-bottom:20px}
+.tab{padding:8px 18px;font-size:13px;font-weight:500;cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;color:var(--texto2);border:1px solid transparent;border-bottom:none;margin-bottom:-2px}
+.tab.active{background:var(--branco);color:var(--azul);border-color:var(--azul-c);border-bottom-color:var(--branco);font-weight:700}
+.tab:not(.active):hover{background:var(--azul-c)}
+
+/* PROGRESS BAR */
+.progress{height:6px;background:var(--borda);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;border-radius:3px;transition:width .3s}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:48px 24px;color:var(--texto2)}
+.empty svg{width:48px;height:48px;margin:0 auto 12px;opacity:.3;display:block}
+.empty h3{font-size:15px;font-weight:600;margin-bottom:6px;color:var(--texto)}
+.empty p{font-size:13px}
+
+/* TOAST */
+.toast-wrap{position:fixed;bottom:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--texto);color:#fff;padding:10px 16px;border-radius:var(--radius);font-size:13px;box-shadow:var(--shadow);animation:slideIn .2s ease;display:flex;align-items:center;gap:8px;min-width:220px}
+.toast.success{background:#2E7D32}
+.toast.error{background:var(--vermelho)}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* PILL PRAZO */
+.prazo-ok{color:var(--texto2)}
+.prazo-soon{color:#BF8F00;font-weight:600}
+.prazo-danger{color:var(--vermelho);font-weight:600}
+.prazo-passed{color:var(--vermelho);font-weight:600;text-decoration:line-through}
+
+/* PRINT */
+@media print{
+  .sidebar,.topbar,.toolbar,.modal-overlay,.toast-wrap{display:none!important}
+  .main{margin-left:0}
+  .content{padding:0}
+}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <h1>&#x1F3E5; Hospital Cordeiro</h1>
+    <p>Sistema de Férias v2.0</p>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Gestão</div>
+    <div class="nav-item active" data-page="painel" onclick="goPage('painel',this)">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Painel Geral
+    </div>
+    <div class="nav-item" data-page="criticos" onclick="goPage('criticos',this)">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Casos Críticos
+    </div>
+    <div class="nav-item" data-page="programacao" onclick="goPage('programacao',this)">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Programação 2026
+    </div>
+    <div class="nav-section">Colaboradores</div>
+    <div class="nav-item" data-page="colaboradores" onclick="goPage('colaboradores',this)">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      Colaboradores
+    </div>
+    <div class="nav-section">Previsão</div>
+    <div class="nav-item" data-page="prev2027" onclick="goPage('prev2027',this)">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/></svg>
+      Previsão 2027
+    </div>
+    <div class="nav-section">Formulários</div>
+    <div class="nav-item" data-page="formulario" onclick="goPage('formulario',this)">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      Formulário RH
+    </div>
+  </nav>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <h2 id="page-title">Painel Geral de Férias</h2>
+    <div class="topbar-right" id="topbar-actions"></div>
+  </div>
+  <div class="content" id="content"></div>
+</div>
+
+<!-- MODAL ROOT -->
+<div id="modal-root"></div>
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// ─── DADOS INICIAIS ────────────────────────────────────────────────────
+const SEED = [
+  {id:"4811",nome:"Aila Carine Santos de Andrade",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4788",nome:"Alexandra Silva Cavalheiro Freitas",funcao:"Assistente Social",depto:"Serviço Social",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"12/01/2026 a 26/01/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4781",nome:"Ana Carolina Duarte da Silva Garcia",funcao:"Enfermeiro",depto:"Enfermagem",admissao:"01/08/2024",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2024 a 31/07/2025",saldo:30,limite:"01/07/2026",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""},
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5748",nome:"Ana Cristina Pereira de Souza",funcao:"Auxiliar de Serviços Gerais",depto:"Serviços Gerais",admissao:"04/09/2025",ativo:true,cpf:"",periodos:[
+    {pa:"04/09/2025 a 03/09/2026",saldo:22.5,limite:"04/08/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"90890",nome:"Ana Karla de Moura Lacerda",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"13/02/2026",ativo:true,cpf:"",periodos:[
+    {pa:"13/02/2026 a 12/02/2027",saldo:10,limite:"13/01/2028",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4779",nome:"Anderson Felipe da Silva Freitas",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"19/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"19/08/2025 a 18/08/2026",saldo:25,limite:"19/07/2027",gozo_ant:"12/01/2026 a 10/02/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"90891",nome:"Ariana Pereira Gil Goncalves",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"20/04/2026",ativo:true,cpf:"",periodos:[
+    {pa:"20/04/2026 a 19/04/2027",saldo:5,limite:"20/03/2028",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4830",nome:"Brender Pimentel Barbosa",funcao:"Vigia",depto:"Segurança",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"06/10/2025 a 04/11/2025",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5046",nome:"Camilla Valadares Heringer Quindeler",funcao:"Assistente Administrativo",depto:"Administrativo",admissao:"07/10/2024",ativo:true,cpf:"",periodos:[
+    {pa:"07/10/2024 a 06/10/2025",saldo:15,limite:"21/09/2026",gozo_ant:"16/03/2026 a 30/03/2026",programacao:null,status_calc:null,obs_prog:""},
+    {pa:"07/10/2025 a 06/10/2026",saldo:20,limite:"06/09/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4911",nome:"Carlos Henrique Buzzi da Silva",funcao:"Gerente de Contrato",depto:"Gestão",admissao:"19/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"19/08/2025 a 18/08/2026",saldo:25,limite:"19/07/2027",gozo_ant:"12/01/2026 a 31/01/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4815",nome:"Cilmar Carvalho Morete",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"20/10/2025",ativo:true,cpf:"",periodos:[
+    {pa:"20/10/2025 a 19/10/2026",saldo:20,limite:"19/09/2027",gozo_ant:"10/03/2026 a 08/04/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4782",nome:"Cintia Reis de Andrade",funcao:"Auxiliar de Serviços Gerais",depto:"Serviços Gerais",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"08/12/2025 a 06/01/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4789",nome:"Creuza de Almeida Felippe",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"26/09/2025",ativo:true,cpf:"",periodos:[
+    {pa:"26/09/2025 a 25/09/2026",saldo:18,limite:"26/08/2027",gozo_ant:"—",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"6001",nome:"Daniele Conceicao Acario",funcao:"Copeiro(a)",depto:"Nutrição",admissao:"05/11/2025",ativo:true,cpf:"",periodos:[
+    {pa:"05/11/2025 a 04/11/2026",saldo:17.5,limite:"05/10/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5061",nome:"Danna Werneck Bucker Mathias",funcao:"Psicólogo",depto:"Psicologia",admissao:"09/10/2025",ativo:true,cpf:"",periodos:[
+    {pa:"09/10/2025 a 08/10/2026",saldo:20,limite:"08/09/2027",gozo_ant:"22/12/2025 a 20/01/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4816",nome:"Dayana Dutra Felix",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"16/10/2025",ativo:true,cpf:"",periodos:[
+    {pa:"16/10/2025 a 15/10/2026",saldo:20,limite:"15/09/2027",gozo_ant:"11/05/2026 a 09/06/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4806",nome:"Dayanne Abreu Monnerat de Souza",funcao:"Enfermeiro",depto:"Enfermagem",admissao:"30/09/2025",ativo:true,cpf:"",periodos:[
+    {pa:"30/09/2025 a 29/09/2026",saldo:20,limite:"30/08/2027",gozo_ant:"12/02/2026 a 13/03/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4822",nome:"Debora de Oliveira",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"08/12/2025 a 06/01/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4817",nome:"Elizabeth da Conceicao Raphael",funcao:"Faturista",depto:"Faturamento",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"12/01/2026 a 26/01/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"90889",nome:"Elizangela De Barros Gomes",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"05/02/2026",ativo:true,cpf:"",periodos:[
+    {pa:"05/02/2026 a 04/02/2027",saldo:10,limite:"05/01/2028",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4844",nome:"Erlane de Lessa Farinha Santos",funcao:"Auxiliar de Farmácia",depto:"Farmácia",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"12/01/2026 a 10/02/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4814",nome:"Fabiana de Oliveira Rosa da Conceicao Ro",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"13/01/2026 a 11/02/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4827",nome:"Fabiana dos Santos Ramos",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"06/10/2025 a 04/11/2025",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5443",nome:"Fabiana Machado de Souza",funcao:"Enfermeiro",depto:"Enfermagem",admissao:"04/04/2026",ativo:true,cpf:"",periodos:[
+    {pa:"04/04/2026 a 03/04/2027",saldo:5,limite:"04/03/2028",gozo_ant:"07/04/2026 a 06/05/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4795",nome:"Fabiana Moura Guimaraes",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"30/09/2025",ativo:true,cpf:"",periodos:[
+    {pa:"30/09/2025 a 29/09/2026",saldo:20,limite:"30/08/2027",gozo_ant:"06/04/2026 a 05/05/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4792",nome:"Fabielen Silva Boquimpani",funcao:"Auxiliar Administrativo",depto:"Administrativo",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"06/10/2025 a 04/11/2025",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5738",nome:"Fabiola Aparecida da Silva Zanon",funcao:"Enfermeiro",depto:"Enfermagem",admissao:"02/09/2025",ativo:true,cpf:"",periodos:[
+    {pa:"02/09/2025 a 01/09/2026",saldo:22.5,limite:"02/08/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4780",nome:"Francine da Silva Sant Anna",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"08/12/2025 a 06/01/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"90895",nome:"Gabriel Almeida dos Santos",funcao:"Auxiliar Administrativo",depto:"Administrativo",admissao:"08/06/2026",ativo:true,cpf:"",periodos:[
+    {pa:"08/06/2026 a 07/06/2027",saldo:0,limite:"08/05/2028",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"6079",nome:"Gabriel Ximenes Correa Rodrigues",funcao:"Médico",depto:"Corpo Clínico",admissao:"15/12/2025",ativo:true,cpf:"",periodos:[
+    {pa:"15/12/2025 a 14/12/2026",saldo:15,limite:"11/11/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5918",nome:"Geovana Candido Moura",funcao:"Copeiro(a)",depto:"Nutrição",admissao:"07/10/2025",ativo:true,cpf:"",periodos:[
+    {pa:"07/10/2025 a 06/10/2026",saldo:20,limite:"06/09/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4801",nome:"Gessemine Oliveira Severo",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"10/11/2025 a 09/12/2025",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4812",nome:"Gilcinea Soares Muniz de Souza",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"06/04/2026 a 05/05/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4787",nome:"Gisele Salles Ignacio de Moraes",funcao:"Farmacêutico",depto:"Farmácia",admissao:"21/10/2025",ativo:true,cpf:"",periodos:[
+    {pa:"21/10/2025 a 20/10/2026",saldo:20,limite:"20/09/2027",gozo_ant:"19/01/2026 a 17/02/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"90887",nome:"Glauber de Souza Melengate",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"13/01/2026",ativo:true,cpf:"",periodos:[
+    {pa:"13/01/2026 a 12/01/2027",saldo:12.5,limite:"13/12/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5743",nome:"Gleisson Soares Correia",funcao:"Motorista Ambulância",depto:"Transporte",admissao:"03/09/2025",ativo:true,cpf:"",periodos:[
+    {pa:"03/09/2025 a 02/09/2026",saldo:22.5,limite:"03/08/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5110",nome:"Grazielle da Silva Viana Conceicao",funcao:"Auxiliar de Serviços Gerais",depto:"Serviços Gerais",admissao:"08/11/2025",ativo:true,cpf:"",periodos:[
+    {pa:"08/11/2025 a 07/11/2026",saldo:17.5,limite:"08/10/2027",gozo_ant:"17/03/2026 a 15/04/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5916",nome:"Iasmmyn Souza Costa Sisnando Kort",funcao:"Farmacêutico",depto:"Farmácia",admissao:"07/10/2025",ativo:true,cpf:"",periodos:[
+    {pa:"07/10/2025 a 06/10/2026",saldo:20,limite:"06/09/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5374",nome:"Ilzinete da Silva Araujo",funcao:"Auxiliar de Serviços Gerais",depto:"Serviços Gerais",admissao:"07/03/2025",ativo:true,cpf:"",periodos:[
+    {pa:"07/03/2025 a 06/03/2026",saldo:30,limite:"04/02/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""},
+    {pa:"07/03/2026 a 06/03/2027",saldo:7.5,limite:"05/02/2028",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5116",nome:"Janaina dos Santos Silva",funcao:"Enfermeiro",depto:"Enfermagem",admissao:"10/11/2025",ativo:true,cpf:"",periodos:[
+    {pa:"10/11/2025 a 09/11/2026",saldo:17.5,limite:"10/10/2027",gozo_ant:"10/03/2026 a 08/04/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4868",nome:"Jane Marcia Oliveira da Silva",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"16/11/2025",ativo:true,cpf:"",periodos:[
+    {pa:"16/11/2025 a 15/11/2026",saldo:17.5,limite:"16/10/2027",gozo_ant:"10/02/2026 a 11/03/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5376",nome:"Jeangela Felizardo Gomes",funcao:"Auxiliar de Serviços Gerais",depto:"Serviços Gerais",admissao:"07/03/2025",ativo:true,cpf:"",periodos:[
+    {pa:"07/03/2025 a 06/03/2026",saldo:30,limite:"04/02/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""},
+    {pa:"07/03/2026 a 06/03/2027",saldo:7.5,limite:"05/02/2028",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4925",nome:"Joelson Aguiar Ladeira",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"02/09/2024",ativo:true,cpf:"",periodos:[
+    {pa:"02/09/2024 a 01/09/2025",saldo:30,limite:"02/08/2026",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""},
+    {pa:"07/12/2025 a 06/12/2026",saldo:15,limite:"06/11/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4903",nome:"Julia Aparecida Vitorino de Souza",funcao:"Farmacêutico",depto:"Farmácia",admissao:"15/11/2025",ativo:true,cpf:"",periodos:[
+    {pa:"15/11/2025 a 14/11/2026",saldo:17.5,limite:"15/10/2027",gozo_ant:"25/03/2026 a 23/04/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5700",nome:"Juliana Rodrigues da Rocha Dias",funcao:"Auxiliar de Serviços Gerais",depto:"Serviços Gerais",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4845",nome:"Jurema Monteiro Torres",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"06/04/2026 a 05/05/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4927",nome:"Keithiele Costa Fernandes",funcao:"Assistente Administrativo",depto:"Administrativo",admissao:"02/09/2024",ativo:true,cpf:"",periodos:[
+    {pa:"02/09/2024 a 01/09/2025",saldo:15,limite:"17/08/2026",gozo_ant:"19/02/2026 a 05/03/2026",programacao:null,status_calc:null,obs_prog:""},
+    {pa:"31/10/2025 a 30/10/2026",saldo:17.5,limite:"30/09/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4826",nome:"Laiza Ferreira Dias da Silva",funcao:"Auxiliar Administrativo",depto:"Administrativo",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"10/11/2025 a 09/12/2025",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5265",nome:"Laura Matos Farinha",funcao:"Farmacêutico",depto:"Farmácia",admissao:"04/02/2026",ativo:true,cpf:"",periodos:[
+    {pa:"04/02/2026 a 03/02/2027",saldo:10,limite:"04/01/2028",gozo_ant:"19/02/2026 a 20/03/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4813",nome:"Leyse de Oliveira Souza",funcao:"Enfermeiro",depto:"Enfermagem",admissao:"14/09/2025",ativo:true,cpf:"",periodos:[
+    {pa:"14/09/2025 a 13/09/2026",saldo:22.5,limite:"14/08/2027",gozo_ant:"15/01/2026 a 13/02/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4855",nome:"Lucia dos Santos Bernardo",funcao:"Auxiliar de Serviços Gerais",depto:"Serviços Gerais",admissao:"02/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"02/08/2025 a 01/08/2026",saldo:25,limite:"02/07/2027",gozo_ant:"12/01/2026 a 10/02/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"6003",nome:"Luciana da Silva",funcao:"Auxiliar de Serviços Gerais",depto:"Serviços Gerais",admissao:"06/11/2025",ativo:true,cpf:"",periodos:[
+    {pa:"06/11/2025 a 05/11/2026",saldo:17.5,limite:"06/10/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4819",nome:"Luiz Eduardo Amancio Benedito",funcao:"Vigia",depto:"Segurança",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"10/11/2025 a 09/12/2025",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4883",nome:"Luiz Silva Junior",funcao:"Auxiliar de Manutenção",depto:"Manutenção",admissao:"10/10/2025",ativo:true,cpf:"",periodos:[
+    {pa:"10/10/2025 a 09/10/2026",saldo:20,limite:"09/09/2027",gozo_ant:"12/01/2026 a 10/02/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"6071",nome:"Manoel Tostes da Cunha",funcao:"Auxiliar de Manutenção",depto:"Manutenção",admissao:"08/12/2025",ativo:true,cpf:"",periodos:[
+    {pa:"08/12/2025 a 07/12/2026",saldo:15,limite:"04/11/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5229",nome:"Manuela Mourao Burlamaqui",funcao:"Jovem Aprendiz",depto:"Administrativo",admissao:"27/01/2025",ativo:true,cpf:"",periodos:[
+    {pa:"27/01/2025 a 26/01/2026",saldo:30,limite:"22/12/2026",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""},
+    {pa:"27/01/2026 a 26/01/2027",saldo:12.5,limite:"27/12/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"6068",nome:"Mara Iris da Silva Marques Mauricio",funcao:"Auxiliar de Cozinha",depto:"Nutrição",admissao:"08/12/2025",ativo:true,cpf:"",periodos:[
+    {pa:"08/12/2025 a 07/12/2026",saldo:15,limite:"07/11/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4794",nome:"Marcio Cardoso de Souza",funcao:"Motorista Ambulância",depto:"Transporte",admissao:"27/12/2025",ativo:true,cpf:"",periodos:[
+    {pa:"27/12/2025 a 26/12/2026",saldo:15,limite:"26/11/2027",gozo_ant:"10/03/2026 a 08/04/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4828",nome:"Maria Izabel Lopes da Silva Gecler",funcao:"Fisioterapeuta",depto:"Reabilitação",admissao:"01/08/2024",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2024 a 31/07/2025",saldo:10,limite:"21/07/2026",gozo_ant:"28/01/2026 a 11/02/2026",programacao:null,status_calc:null,obs_prog:""},
+    {pa:"18/11/2025 a 17/11/2026",saldo:17.5,limite:"18/10/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4776",nome:"Mariluce dos Santos Sanches Baia",funcao:"Auxiliar Administrativo",depto:"Administrativo",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"09/12/2025 a 07/01/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4871",nome:"Marilza Soares Diniz de Oliveira",funcao:"Auxiliar de Rouparia",depto:"Lavanderia",admissao:"19/09/2025",ativo:true,cpf:"",periodos:[
+    {pa:"19/09/2025 a 18/09/2026",saldo:22.5,limite:"19/08/2027",gozo_ant:"12/01/2026 a 10/02/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4790",nome:"Mastrangelo Cler Rodrigues",funcao:"Vigia",depto:"Segurança",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"09/12/2025 a 07/01/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4808",nome:"Maurice Dias Alves Costa",funcao:"Auxiliar Administrativo",depto:"Administrativo",admissao:"09/09/2025",ativo:true,cpf:"",periodos:[
+    {pa:"09/09/2025 a 08/09/2026",saldo:22.5,limite:"09/08/2027",gozo_ant:"13/01/2026 a 11/02/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4798",nome:"Michele Miguel Ribeiro Vieira",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"26/11/2025",ativo:true,cpf:"",periodos:[
+    {pa:"26/11/2025 a 25/11/2026",saldo:17.5,limite:"26/10/2027",gozo_ant:"10/02/2026 a 11/03/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4852",nome:"Mirian Vicente Dias",funcao:"Diretor Administrativo",depto:"Diretoria",admissao:"02/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"02/08/2025 a 01/08/2026",saldo:25,limite:"01/07/2027",gozo_ant:"09/02/2026 a 28/02/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5912",nome:"Miriele Morais Teixeira",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"06/10/2025",ativo:true,cpf:"",periodos:[
+    {pa:"06/10/2025 a 05/10/2026",saldo:20,limite:"05/09/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5733",nome:"Redimaldo Huguenin Correa",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"01/09/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/09/2025 a 31/08/2026",saldo:22.5,limite:"01/08/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5906",nome:"Reginaldo Tadeu Dias Serrano",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"06/10/2025",ativo:true,cpf:"",periodos:[
+    {pa:"06/10/2025 a 05/10/2026",saldo:20,limite:"05/09/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5144",nome:"Renan Nunes Lourenco",funcao:"Maqueiro",depto:"Apoio",admissao:"02/12/2024",ativo:true,cpf:"",periodos:[
+    {pa:"02/12/2024 a 01/12/2025",saldo:30,limite:"30/10/2026",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""},
+    {pa:"02/12/2025 a 01/12/2026",saldo:15,limite:"01/11/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5230",nome:"Rhavi Silva Mansur",funcao:"Jovem Aprendiz",depto:"Administrativo",admissao:"27/01/2025",ativo:true,cpf:"",periodos:[
+    {pa:"27/01/2025 a 26/01/2026",saldo:30,limite:"22/12/2026",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""},
+    {pa:"27/01/2026 a 26/01/2027",saldo:12.5,limite:"27/12/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5220",nome:"Rivaldo Badini Giron",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"17/01/2026",ativo:true,cpf:"",periodos:[
+    {pa:"17/01/2026 a 16/01/2027",saldo:12.5,limite:"17/12/2027",gozo_ant:"12/05/2026 a 10/06/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4778",nome:"Rivaldo da Silva Ivo",funcao:"Motorista Ambulância",depto:"Transporte",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"12/02/2026 a 13/03/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4877",nome:"Romenia Pinheiro de Araujo",funcao:"Instrumentador Cirúrgico",depto:"Centro Cirúrgico",admissao:"05/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"05/08/2025 a 04/08/2026",saldo:25,limite:"05/07/2027",gozo_ant:"06/10/2025 a 04/11/2025",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4869",nome:"Rosimar Soares Muniz",funcao:"Auxiliar de Rouparia",depto:"Lavanderia",admissao:"11/09/2025",ativo:true,cpf:"",periodos:[
+    {pa:"11/09/2025 a 10/09/2026",saldo:22.5,limite:"11/08/2027",gozo_ant:"12/02/2026 a 13/03/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"6067",nome:"Rute Maria de Souza",funcao:"Enfermeiro",depto:"Enfermagem",admissao:"08/12/2025",ativo:true,cpf:"",periodos:[
+    {pa:"08/12/2025 a 07/12/2026",saldo:15,limite:"07/11/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4836",nome:"Sabrina da Silva Mello Viana",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"31/10/2025",ativo:true,cpf:"",periodos:[
+    {pa:"31/10/2025 a 30/10/2026",saldo:17.5,limite:"30/09/2027",gozo_ant:"10/11/2025 a 09/12/2025",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5050",nome:"Sabrina Lima Nunes Oliveira",funcao:"Auxiliar de Farmácia",depto:"Farmácia",admissao:"07/10/2025",ativo:true,cpf:"",periodos:[
+    {pa:"07/10/2025 a 06/10/2026",saldo:20,limite:"06/09/2027",gozo_ant:"08/12/2025 a 06/01/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4777",nome:"Sandro de Souza Figueira",funcao:"Motorista Ambulância",depto:"Transporte",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"12/01/2026 a 10/02/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4841",nome:"Sayonara dos Santos Nascimento",funcao:"Auxiliar de Cozinha",depto:"Nutrição",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"06/10/2025 a 04/11/2025",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4785",nome:"Sidilene Felix Rocha",funcao:"Auxiliar de Serviços Gerais",depto:"Serviços Gerais",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"12/02/2026 a 13/03/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5388",nome:"Sonia Aparecida Barboza Nantes",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"12/03/2025",ativo:true,cpf:"",periodos:[
+    {pa:"12/03/2025 a 11/03/2026",saldo:30,limite:"09/02/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""},
+    {pa:"12/03/2026 a 11/03/2027",saldo:7.5,limite:"10/02/2028",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5016",nome:"Sueli Barbosa Nantes",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"25/09/2025",ativo:true,cpf:"",periodos:[
+    {pa:"25/09/2025 a 24/09/2026",saldo:22.5,limite:"25/08/2027",gozo_ant:"06/10/2025 a 04/11/2025",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4886",nome:"Sylviane Castro Menengati Moraes",funcao:"Nutricionista",depto:"Nutrição",admissao:"06/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"06/08/2025 a 05/08/2026",saldo:25,limite:"06/07/2027",gozo_ant:"29/01/2026 a 12/02/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4832",nome:"Taina Gamas Cardoso Dias",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"20/11/2025",ativo:true,cpf:"",periodos:[
+    {pa:"20/11/2025 a 19/11/2026",saldo:17.5,limite:"20/10/2027",gozo_ant:"09/03/2026 a 07/04/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5636",nome:"Tais Souza Rabelo",funcao:"Enfermeiro",depto:"Enfermagem",admissao:"02/07/2025",ativo:true,cpf:"",periodos:[
+    {pa:"02/07/2025 a 01/07/2026",saldo:27.5,limite:"01/06/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4847",nome:"Tania Aparecida do Nascimento Meireles",funcao:"Instrumentador Cirúrgico",depto:"Centro Cirúrgico",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"10/11/2025 a 09/12/2025",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4791",nome:"Tania Araujo de Souza",funcao:"Auxiliar de Serviços Gerais",depto:"Serviços Gerais",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"10/11/2025 a 09/12/2025",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5276",nome:"Thaynna Rondina Jandre",funcao:"Auxiliar Administrativo",depto:"Administrativo",admissao:"10/02/2025",ativo:true,cpf:"",periodos:[
+    {pa:"10/02/2025 a 09/02/2026",saldo:30,limite:"07/01/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""},
+    {pa:"10/02/2026 a 09/02/2027",saldo:10,limite:"10/01/2028",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4809",nome:"Thieline Bard de Oliveira",funcao:"Diretor NIR",depto:"Diretoria",admissao:"01/08/2024",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2024 a 31/07/2025",saldo:15,limite:"16/07/2026",gozo_ant:"Em curso desde 15/06/2026",programacao:null,status_calc:null,obs_prog:""},
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4820",nome:"Ursula Estebanez Jardim",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"06/10/2025 a 04/11/2025",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4783",nome:"Valdecir Gomes Custodio",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"13/01/2026 a 11/02/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4786",nome:"Vania Coelho Guimaraes",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"10/11/2025 a 09/12/2025",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"4797",nome:"Vinicius da Silva Pinto",funcao:"Enfermeiro",depto:"Enfermagem",admissao:"01/08/2025",ativo:true,cpf:"",periodos:[
+    {pa:"01/08/2025 a 31/07/2026",saldo:25,limite:"01/07/2027",gozo_ant:"11/12/2025 a 09/01/2026",programacao:null,status_calc:null,obs_prog:""}
+  ]},
+  {id:"5909",nome:"Zuleica da Silva Zanon Suet",funcao:"Técnico de Enfermagem",depto:"Enfermagem",admissao:"06/10/2025",ativo:true,cpf:"",periodos:[
+    {pa:"06/10/2025 a 05/10/2026",saldo:20,limite:"05/09/2027",gozo_ant:"Não registrado",programacao:null,status_calc:null,obs_prog:""}
+  ]}
+];
+
+// ─── STORAGE ─────────────────────────────────────────────────────────
+// ─── SUPABASE CONFIG ─────────────────────────────────────────────────
+const SUPA_URL = 'https://nxbginzjxghysrldpiyw.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54YmdpbnpqeGdoeXNybGRwaXl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzNDEzMjIsImV4cCI6MjA5NzkxNzMyMn0.ys-4GilmRCo9czh7UmqKY6oTA0MBsyDTUWeNIg6ecHg';
+
+function supaHeaders(){
+  return {
+    'apikey': SUPA_KEY,
+    'Authorization': 'Bearer ' + SUPA_KEY,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation'
+  };
+}
+
+async function supaGet(table, params=''){
+  const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${params}`, {headers: supaHeaders()});
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+async function supaPost(table, body){
+  const r = await fetch(`${SUPA_URL}/rest/v1/${table}`, {
+    method:'POST', headers: supaHeaders(), body: JSON.stringify(body)
+  });
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+async function supaPatch(table, filter, body){
+  const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${filter}`, {
+    method:'PATCH', headers: supaHeaders(), body: JSON.stringify(body)
+  });
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+async function supaDelete(table, filter){
+  const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${filter}`, {
+    method:'DELETE', headers: supaHeaders()
+  });
+  if(!r.ok) throw new Error(await r.text());
+}
+
+// DB em memória — carregado do Supabase
+let DB = [];
+let DB_LOADED = false;
+
+async function loadData(){
+  try{
+    showLoadingOverlay(true);
+    const colabs = await supaGet('colaboradores','select=*&order=nome');
+    const periods = await supaGet('periodos','select=*&order=colaborador_id,id');
+    DB = colabs.map(c => ({
+      id: c.id, nome: c.nome, funcao: c.funcao, depto: c.depto,
+      admissao: c.admissao, cpf: c.cpf||'', ativo: c.ativo,
+      desligamento: c.desligamento||null,
+      periodos: periods
+        .filter(p=>p.colaborador_id===c.id)
+        .map(p=>({
+          _pid: p.id,
+          pa: p.pa, saldo: p.saldo, limite: p.limite,
+          gozo_ant: p.gozo_ant||'', obs_prog: p.obs_prog||'',
+          programacao: p.programacao||null,
+          status_calc: p.status_calc||null
+        }))
+    }));
+    DB_LOADED = true;
+    // Se banco vazio, popular com SEED
+    if(DB.length===0){
+      console.log('Banco vazio, iniciando seed...');
+      await seedDatabase();
+    } else {
+      console.log('Banco carregado:', DB.length, 'colaboradores');
+    }
+  } catch(e){
+    console.error('Erro ao carregar:', e);
+    toast('Erro ao conectar ao banco. Verifique a conexão.','error');
+    DB = JSON.parse(JSON.stringify(SEED));
+  } finally{
+    showLoadingOverlay(false);
+  }
+}
+
+async function seedDatabase(){
+  toast('Populando banco pela primeira vez... aguarde.');
+  try{
+    // Batch insert todos os colaboradores de uma vez
+    const colabs = SEED.map(c=>({
+      id:c.id, nome:c.nome, funcao:c.funcao, depto:c.depto,
+      admissao:c.admissao, cpf:c.cpf||'', ativo:c.ativo
+    }));
+    await supaPost('colaboradores', colabs);
+
+    // Batch insert todos os períodos de uma vez
+    const periodos = [];
+    SEED.forEach(c=>{
+      c.periodos.forEach(p=>{
+        periodos.push({
+          colaborador_id:c.id, pa:p.pa, saldo:p.saldo, limite:p.limite,
+          gozo_ant:p.gozo_ant||'', programacao:null,
+          status_calc:null, obs_prog:''
+        });
+      });
+    });
+    // Inserir em lotes de 50
+    for(let i=0;i<periodos.length;i+=50){
+      await supaPost('periodos', periodos.slice(i,i+50));
+    }
+    toast('Banco populado com sucesso!','success');
+    await loadData();
+  } catch(e){
+    console.error('Erro no seed:',e);
+    toast('Erro ao popular banco: '+e.message,'error');
+  }
+}
+
+async function saveColaborador(c){
+  try{
+    // Upsert colaborador
+    const r = await fetch(`${SUPA_URL}/rest/v1/colaboradores?id=eq.${c.id}`,{
+      method:'PATCH', headers:supaHeaders(),
+      body:JSON.stringify({
+        nome:c.nome, funcao:c.funcao, depto:c.depto,
+        admissao:c.admissao, cpf:c.cpf||'', ativo:c.ativo,
+        desligamento:c.desligamento||null,
+        updated_at: new Date().toISOString()
+      })
+    });
+    if(!r.ok) throw new Error(await r.text());
+  } catch(e){
+    toast('Erro ao salvar colaborador: '+e.message,'error');
+  }
+}
+
+async function savePeriodo(cid, p){
+  try{
+    const body = {
+      colaborador_id:cid, pa:p.pa, saldo:p.saldo, limite:p.limite,
+      gozo_ant:p.gozo_ant||'', programacao:p.programacao||null,
+      status_calc:p.status_calc||null, obs_prog:p.obs_prog||'',
+      updated_at: new Date().toISOString()
+    };
+    if(p._pid){
+      await supaPatch('periodos',`id=eq.${p._pid}`,body);
+    } else {
+      const res = await supaPost('periodos',[body]);
+      if(res&&res[0]) p._pid = res[0].id;
+    }
+  } catch(e){
+    toast('Erro ao salvar período: '+e.message,'error');
+  }
+}
+
+async function deletePeriodoDB(pid){
+  try{
+    await supaDelete('periodos',`id=eq.${pid}`);
+  } catch(e){ console.error(e); }
+}
+
+async function saveNovoColaboradorDB(c){
+  try{
+    await supaPost('colaboradores',[{
+      id:c.id, nome:c.nome, funcao:c.funcao, depto:c.depto,
+      admissao:c.admissao, cpf:c.cpf||'', ativo:true
+    }]);
+    for(const p of c.periodos){
+      const res = await supaPost('periodos',[{
+        colaborador_id:c.id, pa:p.pa, saldo:p.saldo, limite:p.limite,
+        gozo_ant:p.gozo_ant||'', programacao:null, status_calc:null, obs_prog:''
+      }]);
+      if(res&&res[0]) p._pid = res[0].id;
+    }
+  } catch(e){
+    toast('Erro ao salvar no banco: '+e.message,'error');
+    throw e;
+  }
+}
+
+function showLoadingOverlay(show){
+  let el = document.getElementById('loading-overlay');
+  if(!el){
+    el = document.createElement('div');
+    el.id='loading-overlay';
+    el.style.cssText='position:fixed;inset:0;background:rgba(255,255,255,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:14px';
+    el.innerHTML=`<div style="width:44px;height:44px;border:4px solid #D6E4F0;border-top-color:#1F4E79;border-radius:50%;animation:spin .8s linear infinite"></div><div style="font-size:14px;color:#1F4E79;font-weight:500">Sincronizando com o banco de dados...</div>`;
+    const style=document.createElement('style');
+    style.textContent='@keyframes spin{to{transform:rotate(360deg)}}';
+    document.head.appendChild(style);
+    document.body.appendChild(el);
+  }
+  el.style.display = show?'flex':'none';
+}
+
+// saveData agora é no-op — cada operação salva diretamente
+function saveData(){ updateCounts(); }
+
+// ─── UTILITÁRIOS ──────────────────────────────────────────────────────
+const HOJE = new Date(2026,5,23);
+
+function parseDate(s){
+  if(!s)return null;
+  const p = s.split('/');
+  if(p.length===3) return new Date(+p[2],+p[1]-1,+p[0]);
+  return new Date(s);
+}
+function fmtDate(d){
+  if(!d)return'—';
+  if(typeof d==='string' && d.includes('/')){return d;}
+  return d.toLocaleDateString('pt-BR');
+}
+function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r;}
+function diffDays(d){return Math.round((parseDate(typeof d==='string'?d.includes('/')?d.split('/').reverse().join('-'):d:d.toISOString().slice(0,10))-HOJE)/(864e5));}
+
+function calcStatus(p){
+  if(p.status_calc) return p.status_calc;
+  const lim = parseDate(p.limite);
+  const dias = diffDays(fmtDate(lim));
+  if(dias<0) return 'VENCIDO';
+  if(dias<60) return 'URGENTE';
+  if(dias<180) return 'ALERTA';
+  return 'SEM PROGRAMAÇÃO';
+}
+
+function calcPedidoAte(limiteStr, saldo){
+  const lim = parseDate(limiteStr);
+  const iniGozo = addDays(lim, -saldo);
+  return addDays(iniGozo, -60);
+}
+
+function badgeHTML(status){
+  const map={
+    'VENCIDO':'badge-red','URGENTE':'badge-orange','ALERTA':'badge-orange',
+    'EM ANDAMENTO':'badge-purple','SEM PROGRAMAÇÃO':'badge-gray',
+    'PROGRAMADO':'badge-green','CONCLUÍDO':'badge-blue'
+  };
+  const cls = map[status]||'badge-gray';
+  return `<span class="badge ${cls}">${status}</span>`;
+}
+
+function prazoHTML(pedidoAte){
+  const d = diffDays(fmtDate(pedidoAte));
+  const str = fmtDate(pedidoAte);
+  if(d<0) return `<span class="prazo-passed">${str}</span>`;
+  if(d<7) return `<span class="prazo-danger">${str} (${d}d)</span>`;
+  if(d<30) return `<span class="prazo-soon">${str} (${d}d)</span>`;
+  return `<span class="prazo-ok">${str}</span>`;
+}
+
+function updateCounts(){
+  const ativos = DB.filter(c=>c.ativo);
+  let venc=0,urg=0,and=0,prog=0;
+  ativos.forEach(c=>{
+    c.periodos.forEach(p=>{
+      const s = p.programacao ? (p.status_calc||'PROGRAMADO') : calcStatus(p);
+      if(s==='VENCIDO')venc++;
+      else if(s==='URGENTE'||s==='ALERTA')urg++;
+      else if(s==='EM ANDAMENTO')and++;
+      else if(s==='PROGRAMADO'||s==='CONCLUÍDO')prog++;
+    });
+  });
+  setIfExists('cnt-venc',venc);
+  setIfExists('cnt-urg',urg);
+  setIfExists('cnt-and',and);
+  setIfExists('cnt-prog',prog);
+  setIfExists('cnt-tot',ativos.length);
+}
+function setIfExists(id,val){const el=document.getElementById(id);if(el)el.textContent=val;}
+
+// ─── NAVEGAÇÃO ────────────────────────────────────────────────────────
+let currentPage = 'painel';
+function goPage(page, el){
+  currentPage = page;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(el) el.classList.add('active');
+  const titles = {painel:'Painel Geral de Férias',criticos:'Casos Críticos – Ação Imediata',programacao:'Programação de Férias 2026',colaboradores:'Cadastro de Colaboradores',formulario:'Formulário de Movimentação de Pessoal – Férias',prev2027:'Previsão de Férias 2027'};
+  document.getElementById('page-title').textContent = titles[page]||page;
+  const pages = {painel:renderPainel,criticos:renderCriticos,programacao:renderProgramacao,colaboradores:renderColaboradores,formulario:renderFormulario,prev2027:renderPrev2027};
+  if(pages[page]) pages[page]();
+}
+
+// ─── TOAST ───────────────────────────────────────────────────────────
+function toast(msg, type=''){
+  const tw=document.getElementById('toast-wrap');
+  const t=document.createElement('div');
+  t.className=`toast ${type}`;
+  t.innerHTML=`<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:16px;height:16px;flex-shrink:0"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>${msg}`;
+  tw.appendChild(t);
+  setTimeout(()=>t.remove(),3000);
+}
+
+// ─── MODAL ───────────────────────────────────────────────────────────
+function showModal(html){
+  const root=document.getElementById('modal-root');
+  root.innerHTML=`<div class="modal-overlay" onclick="if(event.target===this)closeModal()">${html}</div>`;
+}
+function closeModal(){document.getElementById('modal-root').innerHTML='';}
+
+// ─── PAINEL GERAL ────────────────────────────────────────────────────
+function renderPainel(){
+  const content=document.getElementById('content');
+  document.getElementById('topbar-actions').innerHTML=
+    `<button class="btn btn-primary" onclick="modalNovoColaborador()"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg> Novo Colaborador</button>`;
+  
+  let srch='',filt='',filtDepto='';
+  
+  function getRows(){
+    const ativos = DB.filter(c=>c.ativo);
+    const rows=[];
+    ativos.forEach(c=>{
+      c.periodos.forEach((p,pi)=>{
+        const status = p.programacao?(p.status_calc||'PROGRAMADO'):calcStatus(p);
+        const pedidoAte = calcPedidoAte(p.limite, p.saldo);
+        if(srch && !c.nome.toLowerCase().includes(srch) && !c.funcao.toLowerCase().includes(srch) && !c.id.includes(srch)) return;
+        if(filt && status!==filt) return;
+        if(filtDepto && c.depto!==filtDepto) return;
+        rows.push({c,p,pi,status,pedidoAte});
+      });
+    });
+    return rows;
+  }
+
+  function deptos(){
+    return [...new Set(DB.filter(c=>c.ativo).map(c=>c.depto))].sort();
+  }
+
+  function drawTable(){
+    const rows=getRows();
+    if(!rows.length) return `<div class="empty"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><h3>Nenhum resultado</h3><p>Ajuste os filtros de busca.</p></div>`;
+    return `<table><thead><tr>
+      <th style="width:4%">Contr.</th>
+      <th style="width:24%">Nome</th>
+      <th style="width:14%">Função</th>
+      <th style="width:20%">Período Aquisitivo</th>
+      <th style="width:6%;text-align:center">Saldo</th>
+      <th style="width:11%">Data Limite</th>
+      <th style="width:13%">Enviar pedido até</th>
+      <th style="width:10%">Status</th>
+      <th class="col-act">Ações</th>
+    </tr></thead><tbody>${rows.map(({c,p,pi,status,pedidoAte})=>`
+    <tr>
+      <td style="font-size:11px;color:var(--texto2)">${c.id}</td>
+      <td class="col-name">${c.nome}</td>
+      <td style="font-size:12px;color:var(--texto2)">${c.funcao}</td>
+      <td style="font-size:12px">${p.pa}</td>
+      <td style="text-align:center;font-weight:600">${p.saldo}d</td>
+      <td style="font-size:12px">${p.limite}</td>
+      <td style="font-size:12px">${prazoHTML(pedidoAte)}</td>
+      <td>${badgeHTML(status)}</td>
+      <td class="col-act">
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-sm" title="Programar férias" onclick="modalProgramar('${c.id}',${pi})"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:14px;height:14px"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></button>
+          <button class="btn btn-sm" title="Emitir ofício" onclick="modalOficio('${c.id}',${pi})"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></button>
+          <button class="btn btn-sm" title="Editar colaborador" onclick="modalEditarColaborador('${c.id}')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        </div>
+      </td>
+    </tr>`).join('')}</tbody></table>`;
+  }
+
+  content.innerHTML=`
+  <div class="stats">
+    <div class="stat-card"><div class="stat-icon" style="background:#FFEBEB"><svg fill="none" stroke="#C00000" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div><div class="stat-n" id="cnt-venc" style="color:var(--vermelho)">0</div><div class="stat-l">Vencidos</div></div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:#FFF2CC"><svg fill="none" stroke="#BF8F00" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div><div class="stat-n" id="cnt-urg" style="color:#BF8F00">0</div><div class="stat-l">Urgentes / Alerta</div></div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:#EAD1FF"><svg fill="none" stroke="#7030A0" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 8 12 12 14 14"/></svg></div><div><div class="stat-n" id="cnt-and" style="color:#7030A0">0</div><div class="stat-l">Em andamento</div></div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:var(--verde-c)"><svg fill="none" stroke="var(--verde)" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div><div class="stat-n" id="cnt-prog" style="color:var(--verde)">0</div><div class="stat-l">Programados</div></div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:var(--azul-c)"><svg fill="none" stroke="var(--azul)" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div><div><div class="stat-n" id="cnt-tot" style="color:var(--azul)">0</div><div class="stat-l">Colaboradores</div></div></div>
+  </div>
+  <div class="toolbar">
+    <div class="search-wrap"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><input type="text" class="search-input" placeholder="Buscar por nome, função ou contrato..." id="srch-inp" oninput="document.getElementById('tbl-body').innerHTML=getTblBody()"></div>
+    <select id="filt-status" onchange="document.getElementById('tbl-body').innerHTML=getTblBody()">
+      <option value="">Todos os status</option>
+      <option value="VENCIDO">Vencidos</option>
+      <option value="URGENTE">Urgentes</option>
+      <option value="ALERTA">Alerta</option>
+      <option value="EM ANDAMENTO">Em andamento</option>
+      <option value="PROGRAMADO">Programados</option>
+      <option value="SEM PROGRAMAÇÃO">Sem programação</option>
+    </select>
+    <select id="filt-depto" onchange="document.getElementById('tbl-body').innerHTML=getTblBody()">
+      <option value="">Todos os setores</option>
+      ${deptos().map(d=>`<option>${d}</option>`).join('')}
+    </select>
+  </div>
+  <div class="tbl-wrap"><table>
+    <thead><tr>
+      <th style="width:5%">Contr.</th>
+      <th style="width:22%">Nome</th>
+      <th style="width:14%">Função</th>
+      <th style="width:20%">Período Aquisitivo</th>
+      <th style="width:6%;text-align:center">Saldo</th>
+      <th style="width:11%">Data Limite</th>
+      <th style="width:11%">Enviar pedido até</th>
+      <th style="width:8%">Status</th>
+      <th class="col-act">Ações</th>
+    </tr></thead>
+    <tbody id="tbl-body"></tbody>
+  </table></div>`;
+  
+  window.getTblBody=function(){
+    srch=document.getElementById('srch-inp').value.toLowerCase();
+    filt=document.getElementById('filt-status').value;
+    filtDepto=document.getElementById('filt-depto').value;
+    const rows=getRows();
+    if(!rows.length){
+      const semFiltro = !srch && !filt && !filtDepto;
+      return `<tr><td colspan="9"><div class="empty" style="padding:32px">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:40px;height:40px;margin:0 auto 10px;display:block;opacity:.3"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <p>${semFiltro?'Nenhum colaborador cadastrado.':'Nenhum resultado encontrado.'}</p>
+        ${semFiltro?`<button class="btn btn-primary" style="margin:12px auto 0;display:flex" onclick="forcarSeed()">⬇️ Carregar 94 colaboradores</button>`:''}
+      </div></td></tr>`;
+    }
+    return rows.map(({c,p,pi,status,pedidoAte})=>`
+    <tr>
+      <td style="font-size:11px;color:var(--texto2)">${c.id}</td>
+      <td class="col-name">${c.nome}</td>
+      <td style="font-size:12px;color:var(--texto2)">${c.funcao}</td>
+      <td style="font-size:12px">${p.pa}</td>
+      <td style="text-align:center;font-weight:600">${p.saldo}d</td>
+      <td style="font-size:12px">${p.limite}</td>
+      <td style="font-size:12px">${prazoHTML(pedidoAte)}</td>
+      <td>${badgeHTML(status)}</td>
+      <td class="col-act"><div style="display:flex;gap:4px">
+        <button class="btn btn-sm" title="Programar férias" onclick="modalProgramar('${c.id}',${pi})">📅</button>
+        <button class="btn btn-sm" title="Gerar formulário RH" onclick="modalFormulario('${c.id}',${pi})">📋</button>
+        <button class="btn btn-sm" title="Editar" onclick="modalEditarColaborador('${c.id}')">✏️</button>
+      </div></td>
+    </tr>`).join('');
+  };
+  document.getElementById('tbl-body').innerHTML=getTblBody();
+  updateCounts();
+}
+
+// ─── MODAL PROGRAMAR FÉRIAS ──────────────────────────────────────────
+function modalProgramar(cid, pi){
+  const c = DB.find(x=>x.id===cid);
+  if(!c)return;
+  const p = c.periodos[pi];
+  const lim = parseDate(p.limite);
+  const st = calcStatus(p);
+  const alert = st==='VENCIDO'?`<div class="alert alert-danger"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><div><strong>Período vencido.</strong> A data limite já passou. Registre o gozo mesmo assim para fins de histórico e acione o DP da Prima Qualitá.</div></div>`:
+    st==='URGENTE'?`<div class="alert alert-warn"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><strong>Prazo urgente.</strong> Envie o pedido à Prima Qualitá imediatamente para garantir aviso de 30 dias ao colaborador.</div></div>`:'';
+
+  const hoje8 = HOJE.toISOString().slice(0,10);
+  const iniVal = p.programacao?.inicio ? p.programacao.inicio.split('/').reverse().join('-') : hoje8;
+  const fimVal = p.programacao?.fim ? p.programacao.fim.split('/').reverse().join('-') : '';
+
+  showModal(`<div class="modal">
+    <div class="modal-header">
+      <div><h3>Programar Férias</h3><p>${c.nome} · ${p.pa} · Saldo: ${p.saldo} dias</p></div>
+      <button class="close-btn" onclick="closeModal()"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      ${alert}
+      <div class="section-title">Datas do gozo</div>
+      <div class="form-grid">
+        <div class="field"><label class="required">Data de início</label><input type="date" class="fi" id="prog-ini" value="${iniVal}" onchange="calcFim(${p.saldo})"></div>
+        <div class="field"><label>Data de término (calculada)</label><input type="date" class="fi readonly-field" id="prog-fim" value="${fimVal}" readonly></div>
+      </div>
+      <div class="form-grid cols-1" style="margin-top:10px">
+        <div class="field"><label>Dias a conceder</label><input type="number" class="fi" id="prog-dias" value="${p.saldo}" min="1" max="${p.saldo}" onchange="calcFim(this.value)"><div class="field-note">Máx. ${p.saldo} dias (pode fracionar em acordo com CLT Art. 134)</div></div>
+      </div>
+      <div class="section-title">Status do gozo</div>
+      <div class="form-grid">
+        <div class="field"><label class="required">Status</label><select class="fi" id="prog-status">
+          <option value="PROGRAMADO" ${p.status_calc==='PROGRAMADO'?'selected':''}>Programado</option>
+          <option value="EM ANDAMENTO" ${p.status_calc==='EM ANDAMENTO'?'selected':''}>Em andamento</option>
+          <option value="CONCLUÍDO" ${p.status_calc==='CONCLUÍDO'?'selected':''}>Concluído</option>
+        </select></div>
+        <div class="field"><label>Observação</label><input type="text" class="fi" id="prog-obs" value="${p.obs_prog||''}" placeholder="Ex.: fracionado em 2 períodos..."></div>
+      </div>
+      <div id="prazo-info" style="margin-top:12px"></div>
+    </div>
+    <div class="modal-footer">
+      ${p.programacao?`<button class="btn btn-danger" onclick="limparProgramacao('${cid}',${pi})">Limpar programação</button>`:''}
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarProgramacao('${cid}',${pi})">Salvar programação</button>
+    </div>
+  </div>`);
+  calcFim(p.saldo);
+}
+
+window.calcFim=function(saldo){
+  const ini=document.getElementById('prog-ini').value;
+  const info=document.getElementById('prazo-info');
+  if(!ini){info.innerHTML='';return;}
+  const d=new Date(ini+'T12:00:00');
+  const fim=new Date(d);fim.setDate(fim.getDate()+(+saldo-1));
+  document.getElementById('prog-fim').value=fim.toISOString().slice(0,10);
+  const pedAte=addDays(parseDate(document.querySelector('#prog-fim').closest('.modal').querySelector('.modal-header p').textContent.split('Saldo')[0].trim()),0);
+  info.innerHTML=`<div class="alert alert-info"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:16px;height:16px"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg><span>Período definido: <strong>${fmtDate(d)}</strong> a <strong>${fmtDate(fim)}</strong> (${saldo} dias corridos)</span></div>`;
+};
+
+window.salvarProgramacao=async function(cid,pi){
+  const ini=document.getElementById('prog-ini').value;
+  const fim=document.getElementById('prog-fim').value;
+  const dias=document.getElementById('prog-dias').value;
+  const status=document.getElementById('prog-status').value;
+  const obs=document.getElementById('prog-obs').value;
+  if(!ini||!fim){toast('Informe a data de início.','error');return;}
+  const c=DB.find(x=>x.id===cid);
+  c.periodos[pi].programacao={
+    inicio:new Date(ini+'T12:00:00').toLocaleDateString('pt-BR'),
+    fim:new Date(fim+'T12:00:00').toLocaleDateString('pt-BR'),
+    dias:+dias
+  };
+  c.periodos[pi].status_calc=status;
+  c.periodos[pi].obs_prog=obs;
+  await savePeriodo(cid, c.periodos[pi]);
+  saveData();
+  closeModal();
+  toast('Programação de férias salva com sucesso!','success');
+  renderPainel();
+};
+
+window.limparProgramacao=async function(cid,pi){
+  const c=DB.find(x=>x.id===cid);
+  c.periodos[pi].programacao=null;
+  c.periodos[pi].status_calc=null;
+  c.periodos[pi].obs_prog='';
+  await savePeriodo(cid, c.periodos[pi]);
+  saveData();
+  closeModal();
+  toast('Programação removida.');
+  renderPainel();
+};
+
+// ─── MODAL OFÍCIO ─────────────────────────────────────────────────────
+window.modalOficio=function(cid,pi){
+  const c=DB.find(x=>x.id===cid);
+  const p=c.periodos[pi];
+  const hoje=HOJE;
+  const numOf=`OF-RH-${String(hoje.getFullYear()).slice(-2)}${String(hoje.getMonth()+1).padStart(2,'0')}-${c.id}`;
+  let iniGozo,fimGozo;
+  if(p.programacao){
+    iniGozo=p.programacao.inicio;
+    fimGozo=p.programacao.fim;
+  } else {
+    const pedAte=calcPedidoAte(p.limite,p.saldo);
+    const ini=addDays(pedAte,60);
+    iniGozo=fmtDate(ini);
+    fimGozo=fmtDate(addDays(ini,p.saldo-1));
+  }
+  const doc=`HOSPITAL MUNICIPAL DE CORDEIRO
+DIRETORIA ADMINISTRATIVA
+
+Ofício nº ${numOf}
+
+Cordeiro/RJ, ${hoje.toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})}
+
+
+À
+Prima Qualitá – Gestão em Saúde
+A/C: Setor de Recursos Humanos
+
+
+Assunto: Solicitação de Programação de Férias
+
+
+Prezados Senhores,
+
+Por meio do presente ofício, solicito a V.Sas. a formalização, programação
+e emissão do aviso de férias do(a) colaborador(a) abaixo identificado(a),
+em conformidade com o período aquisitivo correspondente:
+
+  ─────────────────────────────────────────
+  Nome completo   : ${c.nome}
+  Contrato nº     : ${c.id}
+  Função          : ${c.funcao}
+  Setor / Depto.  : ${c.depto}
+  Admissão        : ${c.admissao}
+  ─────────────────────────────────────────
+  Período Aquisitivo : ${p.pa}
+  Saldo de dias      : ${p.saldo} dias
+  Data limite (CLT)  : ${p.limite}
+  ─────────────────────────────────────────
+  Período de Gozo Proposto:
+  Início   : ${iniGozo}
+  Término  : ${fimGozo}
+  Total    : ${p.saldo} dias corridos
+  ─────────────────────────────────────────
+  Gozo anterior registrado: ${p.gozo_ant||'Não registrado'}
+
+Solicitamos a emissão do aviso de férias com antecedência mínima de 30
+(trinta) dias, conforme determinação do Art. 135 da Consolidação das Leis
+do Trabalho – CLT, e a confirmação do período proposto via e-mail ou sistema
+no prazo de 5 (cinco) dias úteis.
+
+Colocamo-nos à disposição para eventuais ajustes na data de início, desde
+que observados os prazos legais e o vencimento do período aquisitivo acima
+informado.
+
+
+Atenciosamente,
+
+
+_____________________________________________
+Mírian Vicente Dias
+Diretora Administrativa
+Hospital Municipal de Cordeiro
+Contrato de Gestão nº 196/2025 – Prima Qualitá
+cordeiroadm@primaqualita.com.br`;
+
+  showModal(`<div class="modal" style="max-width:700px">
+    <div class="modal-header">
+      <div><h3>Ofício de Pedido de Férias</h3><p>${c.nome} · Contrato ${c.id} · ${p.pa}</p></div>
+      <button class="close-btn" onclick="closeModal()"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info" style="margin-bottom:14px"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:16px;height:16px"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg><span>Copie o texto abaixo e envie por e-mail ou sistema à Prima Qualitá com pelo menos <strong>60 dias de antecedência</strong> ao início do gozo.</span></div>
+      <div class="doc-box" id="oficio-txt">${doc}</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Fechar</button>
+      <button class="btn" onclick="copiarOficio()"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copiar texto</button>
+      <button class="btn btn-primary" onclick="window.print()"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimir</button>
+    </div>
+  </div>`);
+};
+
+window.copiarOficio=function(){
+  const t=document.getElementById('oficio-txt').innerText;
+  navigator.clipboard.writeText(t).then(()=>toast('Ofício copiado para a área de transferência!','success'));
+};
+
+// ─── CASOS CRÍTICOS ──────────────────────────────────────────────────
+function renderCriticos(){
+  document.getElementById('topbar-actions').innerHTML='';
+  const rows=[];
+  DB.filter(c=>c.ativo).forEach(c=>{
+    c.periodos.forEach((p,pi)=>{
+      const st = p.programacao?(p.status_calc||'PROGRAMADO'):calcStatus(p);
+      if(['VENCIDO','URGENTE','ALERTA'].includes(st)){
+        rows.push({c,p,pi,st});
+      }
+    });
+  });
+  rows.sort((a,b)=>{
+    const ord={VENCIDO:0,URGENTE:1,ALERTA:2};
+    return (ord[a.st]||9)-(ord[b.st]||9)||parseDate(a.p.limite)-parseDate(b.p.limite);
+  });
+  const content=document.getElementById('content');
+  if(!rows.length){
+    content.innerHTML=`<div class="empty" style="margin-top:60px"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:56px;height:56px;margin:0 auto 16px;display:block;opacity:.2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><h3>Nenhum caso crítico!</h3><p>Todos os períodos aquisitivos estão dentro do prazo.</p></div>`;
+    return;
+  }
+  content.innerHTML=`
+  <div class="alert alert-danger" style="margin-bottom:16px"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><div><strong>${rows.length} caso(s) requerem ação imediata.</strong> Vencidos devem ser comunicados ao DP da Prima Qualitá imediatamente para evitar pagamento em dobro (CLT Art. 137). Urgentes precisam de pedido e aviso em até 30 dias.</div></div>
+  <div class="tbl-wrap"><table>
+  <thead><tr>
+    <th style="width:5%">Contr.</th>
+    <th style="width:23%">Nome</th>
+    <th style="width:14%">Função</th>
+    <th style="width:20%">Período Aquisitivo</th>
+    <th style="width:6%;text-align:center">Saldo</th>
+    <th style="width:11%">Data Limite</th>
+    <th style="width:10%">Status</th>
+    <th>Ação recomendada</th>
+    <th class="col-act"></th>
+  </tr></thead><tbody>
+  ${rows.map(({c,p,pi,st})=>{
+    const lim=parseDate(p.limite);
+    const dias=diffDays(fmtDate(lim));
+    const acao=st==='VENCIDO'?'Acionar DP/Prima Qualitá imediatamente – risco passivo trabalhista':
+      dias<30?`Emitir pedido HOJE – aviso de 30 dias ao colaborador`:
+      `Enviar pedido à Prima Qualitá nos próximos ${dias-30} dias`;
+    return `<tr>
+      <td style="font-size:11px;color:var(--texto2)">${c.id}</td>
+      <td class="col-name">${c.nome}</td>
+      <td style="font-size:12px;color:var(--texto2)">${c.funcao}</td>
+      <td style="font-size:12px">${p.pa}</td>
+      <td style="text-align:center;font-weight:600">${p.saldo}d</td>
+      <td style="font-size:12px;font-weight:600;color:${dias<0?'var(--vermelho)':'#7F6000'}">${p.limite}</td>
+      <td>${badgeHTML(st)}</td>
+      <td style="font-size:12px;color:var(--texto2)">${acao}</td>
+      <td class="col-act"><div style="display:flex;gap:4px">
+        <button class="btn btn-sm btn-primary" onclick="modalProgramar('${c.id}',${pi})">Programar</button>
+        <button class="btn btn-sm" onclick="modalFormulario('${c.id}',${pi})">📋 Formulário</button>
+      </div></td>
+    </tr>`;
+  }).join('')}
+  </tbody></table></div>`;
+  updateCounts();
+}
+
+// ─── PROGRAMAÇÃO ─────────────────────────────────────────────────────
+function renderProgramacao(){
+  document.getElementById('topbar-actions').innerHTML='';
+  const meses=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const rows=[];
+  DB.filter(c=>c.ativo).forEach(c=>{
+    c.periodos.forEach((p,pi)=>{
+      if(p.programacao){
+        rows.push({c,p,pi,status:p.status_calc||'PROGRAMADO'});
+      }
+    });
+  });
+  rows.sort((a,b)=>parseDate(a.p.programacao.inicio)-parseDate(b.p.programacao.inicio));
+  const content=document.getElementById('content');
+  if(!rows.length){
+    content.innerHTML=`<div class="empty" style="margin-top:60px"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:56px;height:56px;margin:0 auto 16px;display:block;opacity:.2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><h3>Nenhuma férias programada ainda</h3><p>Use o botão 📅 na listagem para programar o período de gozo de cada colaborador.</p></div>`;
+    return;
+  }
+  content.innerHTML=`
+  <div class="alert alert-info" style="margin-bottom:16px"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg><span><strong>${rows.length} período(s) programados.</strong> Clique em qualquer linha para editar a programação ou emitir o ofício.</span></div>
+  <div class="tbl-wrap"><table>
+  <thead><tr>
+    <th>Nome</th><th>Função</th><th>Período Aquisitivo</th>
+    <th>Início do Gozo</th><th>Término</th><th style="text-align:center">Dias</th>
+    <th>Status</th><th class="col-act">Ações</th>
+  </tr></thead><tbody>
+  ${rows.map(({c,p,pi,status})=>`<tr>
+    <td class="col-name">${c.nome}</td>
+    <td style="font-size:12px;color:var(--texto2)">${c.funcao}</td>
+    <td style="font-size:12px">${p.pa}</td>
+    <td style="font-weight:500">${p.programacao.inicio}</td>
+    <td>${p.programacao.fim}</td>
+    <td style="text-align:center;font-weight:600">${p.programacao.dias}d</td>
+    <td>${badgeHTML(status)}</td>
+    <td class="col-act"><div style="display:flex;gap:4px">
+      <button class="btn btn-sm" onclick="modalProgramar('${c.id}',${pi})">✏️ Editar</button>
+      <button class="btn btn-sm" onclick="modalFormulario('${c.id}',${pi})">📋 Formulário</button>
+    </div></td>
+  </tr>`).join('')}
+  </tbody></table></div>`;
+  updateCounts();
+}
+
+// ─── COLABORADORES ───────────────────────────────────────────────────
+function renderColaboradores(){
+  document.getElementById('topbar-actions').innerHTML=
+    `<button class="btn btn-primary" onclick="modalNovoColaborador()"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg> Novo Colaborador</button>`;
+  let srch='',mostrarInativos=false;
+  const content=document.getElementById('content');
+  content.innerHTML=`
+  <div class="toolbar">
+    <div class="search-wrap" style="flex:1"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><input type="text" class="search-input" id="srch-col" placeholder="Buscar por nome, função, contrato..." oninput="drawColaboradores()"></div>
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="cb-inativos" onchange="drawColaboradores()"> Mostrar desligados</label>
+  </div>
+  <div id="col-tbl"></div>`;
+  
+  window.drawColaboradores=function(){
+    srch=document.getElementById('srch-col').value.toLowerCase();
+    mostrarInativos=document.getElementById('cb-inativos').checked;
+    const lista=DB.filter(c=>{
+      if(!mostrarInativos&&!c.ativo)return false;
+      return c.nome.toLowerCase().includes(srch)||c.funcao.toLowerCase().includes(srch)||c.id.includes(srch);
+    }).sort((a,b)=>a.nome.localeCompare(b.nome));
+    document.getElementById('col-tbl').innerHTML=`<div class="tbl-wrap"><table>
+    <thead><tr>
+      <th style="width:6%">Contrato</th>
+      <th style="width:28%">Nome</th>
+      <th style="width:16%">Função</th>
+      <th style="width:12%">Setor</th>
+      <th style="width:10%">Admissão</th>
+      <th style="width:8%">Situação</th>
+      <th style="width:8%;text-align:center">Períodos</th>
+      <th class="col-act">Ações</th>
+    </tr></thead><tbody>
+    ${lista.map(c=>`<tr style="${!c.ativo?'opacity:.55':''}">
+      <td style="font-size:11px;color:var(--texto2)">${c.id}</td>
+      <td class="col-name">${c.nome}</td>
+      <td style="font-size:12px;color:var(--texto2)">${c.funcao}</td>
+      <td style="font-size:12px">${c.depto}</td>
+      <td style="font-size:12px">${c.admissao}</td>
+      <td>${c.ativo?'<span class="badge badge-green">Ativo</span>':'<span class="badge badge-gray">Desligado</span>'}</td>
+      <td style="text-align:center;font-size:12px">${c.periodos.length}</td>
+      <td class="col-act"><div style="display:flex;gap:4px">
+        <button class="btn btn-sm" onclick="modalEditarColaborador('${c.id}')">✏️ Editar</button>
+        <button class="btn btn-sm" onclick="modalNovoPeriodo('${c.id}')">＋ Período</button>
+        ${c.ativo?`<button class="btn btn-sm btn-danger" onclick="confirmarDesligar('${c.id}')">Desligar</button>`:`<button class="btn btn-sm btn-success" onclick="reativar('${c.id}')">Reativar</button>`}
+      </div></td>
+    </tr>`).join('')}
+    </tbody></table></div>`;
+  };
+  drawColaboradores();
+  updateCounts();
+}
+
+// ─── MODAL NOVO / EDITAR COLABORADOR ─────────────────────────────────
+window.modalNovoColaborador=function(){
+  showModal(`<div class="modal">
+    <div class="modal-header">
+      <div><h3>Novo Colaborador</h3><p>Preencha os dados e o primeiro período aquisitivo</p></div>
+      <button class="close-btn" onclick="closeModal()"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="section-title">Dados pessoais e contratuais</div>
+      <div class="form-grid">
+        <div class="field"><label class="required">Nº Contrato / Matrícula</label><input type="text" class="fi" id="n-id" placeholder="Ex.: 4811"></div>
+        <div class="field"><label class="required">Data de admissão</label><input type="date" class="fi" id="n-admissao"></div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label>CPF</label><input type="text" class="fi" id="n-cpf" placeholder="000.000.000-00" maxlength="14" oninput="fmtCpf(this)"></div>
+        <div class="field"></div>
+      </div>
+      <div id="cpf-dup-warn" class="alert alert-danger" style="display:none;margin-top:-6px"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:16px;height:16px;flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span></span></div>
+      <div class="form-grid cols-1">
+        <div class="field"><label class="required">Nome completo</label><input type="text" class="fi" id="n-nome" placeholder="Nome completo do colaborador"></div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label class="required">Função / Cargo</label><input type="text" class="fi" id="n-funcao" placeholder="Ex.: Técnico de Enfermagem"></div>
+        <div class="field"><label class="required">Setor / Departamento</label><input type="text" class="fi" id="n-depto" placeholder="Ex.: Enfermagem" list="deptos-list">
+          <datalist id="deptos-list">${[...new Set(DB.map(c=>c.depto))].sort().map(d=>`<option>${d}</option>`).join('')}</datalist>
+        </div>
+      </div>
+      <div class="section-title">Primeiro Período Aquisitivo</div>
+      <div class="form-grid">
+        <div class="field"><label class="required">Início do PA</label><input type="date" class="fi" id="n-pa-ini" onchange="autoLimite()"></div>
+        <div class="field"><label class="required">Fim do PA</label><input type="date" class="fi" id="n-pa-fim" onchange="autoLimite()"></div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label class="required">Saldo de dias</label><input type="number" class="fi" id="n-saldo" value="30" min="1" max="30"></div>
+        <div class="field"><label class="required">Data limite (CLT)</label><input type="date" class="fi" id="n-limite"><div class="field-note">Calculada automaticamente ou ajuste manualmente</div></div>
+      </div>
+      <div class="form-grid cols-1">
+        <div class="field"><label>Gozo anterior registrado (se houver)</label><input type="text" class="fi" id="n-gozo" placeholder="Ex.: 10/02/2026 a 11/03/2026"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarNovoColaborador()">Cadastrar colaborador</button>
+    </div>
+  </div>`);
+};
+
+window.autoLimite=function(){
+  const fim=document.getElementById('n-pa-fim').value;
+  if(!fim)return;
+  const d=new Date(fim+'T12:00:00');
+  d.setFullYear(d.getFullYear()+1);
+  d.setDate(d.getDate()-1);
+  document.getElementById('n-limite').value=d.toISOString().slice(0,10);
+};
+
+window.salvarNovoColaborador=async function(){
+  const id=document.getElementById('n-id').value.trim();
+  const nome=document.getElementById('n-nome').value.trim();
+  const funcao=document.getElementById('n-funcao').value.trim();
+  const depto=document.getElementById('n-depto').value.trim();
+  const admissao=document.getElementById('n-admissao').value;
+  const paIni=document.getElementById('n-pa-ini').value;
+  const paFim=document.getElementById('n-pa-fim').value;
+  const saldo=+document.getElementById('n-saldo').value;
+  const limite=document.getElementById('n-limite').value;
+  const gozo=document.getElementById('n-gozo').value.trim();
+  if(!id||!nome||!funcao||!depto||!admissao||!paIni||!paFim||!limite){
+    toast('Preencha todos os campos obrigatórios (*)','error');return;
+  }
+  if(DB.find(c=>c.id===id)){toast('Já existe um colaborador com este número de contrato.','error');return;}
+  const fmtBR=s=>new Date(s+'T12:00:00').toLocaleDateString('pt-BR');
+  const cpfNovo=document.getElementById('n-cpf').value.trim();
+  const novoC={
+    id,nome,funcao,depto,
+    admissao:fmtBR(admissao),
+    cpf:cpfNovo,
+    ativo:true,
+    desligamento:null,
+    periodos:[{
+      pa:`${fmtBR(paIni)} a ${fmtBR(paFim)}`,
+      saldo,
+      limite:fmtBR(limite),
+      gozo_ant:gozo||'Não registrado',
+      programacao:null,
+      status_calc:null,
+      obs_prog:''
+    }]
+  };
+  try{
+    await saveNovoColaboradorDB(novoC);
+    DB.push(novoC);
+    saveData();
+    closeModal();
+    toast(`${nome} cadastrado(a) com sucesso!`,'success');
+    if(currentPage==='colaboradores') renderColaboradores();
+    else renderPainel();
+  } catch(e){ return; }
+};
+
+// ─── EDITAR COLABORADOR ───────────────────────────────────────────────
+window.modalEditarColaborador=function(cid){
+  const c=DB.find(x=>x.id===cid);
+  showModal(`<div class="modal">
+    <div class="modal-header">
+      <div><h3>Editar Colaborador</h3><p>Contrato ${c.id}</p></div>
+      <button class="close-btn" onclick="closeModal()"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid cols-1">
+        <div class="field"><label class="required">Nome completo</label><input type="text" class="fi" id="e-nome" value="${c.nome}"></div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label class="required">Função / Cargo</label><input type="text" class="fi" id="e-funcao" value="${c.funcao}"></div>
+        <div class="field"><label class="required">Setor</label><input type="text" class="fi" id="e-depto" value="${c.depto}"></div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label>Nº Contrato</label><input type="text" class="fi readonly-field" value="${c.id}" readonly></div>
+        <div class="field"><label>Data de admissão</label><input type="text" class="fi" id="e-admissao" value="${c.admissao}"></div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label>CPF</label><input type="text" class="fi" id="e-cpf" value="${c.cpf||''}" placeholder="000.000.000-00" maxlength="14" oninput="fmtCpf(this)"></div>
+        <div class="field"></div>
+      </div>
+      <div id="cpf-dup-warn" class="alert alert-danger" style="display:none;margin-top:-6px"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:16px;height:16px;flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span></span></div>
+      <div class="section-title">Períodos Aquisitivos</div>
+      ${c.periodos.map((p,pi)=>`
+      <div style="background:var(--cinza-c);border-radius:var(--radius);padding:12px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <strong style="font-size:13px">Período ${pi+1}: ${p.pa}</strong>
+          ${c.periodos.length>1?`<button class="btn btn-sm btn-danger" onclick="removerPeriodo('${c.id}',${pi})">Remover</button>`:''}
+        </div>
+        <div class="form-grid" style="background:transparent">
+          <div class="field"><label>Saldo</label><input type="number" class="fi" id="ep-saldo-${pi}" value="${p.saldo}" min="1" max="30" style="background:#fff"></div>
+          <div class="field"><label>Data Limite</label><input type="text" class="fi" id="ep-limite-${pi}" value="${p.limite}" style="background:#fff"></div>
+        </div>
+        <div class="form-grid cols-1" style="background:transparent">
+          <div class="field"><label>Gozo anterior</label><input type="text" class="fi" id="ep-gozo-${pi}" value="${p.gozo_ant||''}" style="background:#fff"></div>
+        </div>
+        ${p.programacao?`<div class="alert alert-success" style="margin-top:8px;font-size:12px"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg> Programado: ${p.programacao.inicio} a ${p.programacao.fim} (${p.programacao.dias}d) <button class="btn btn-sm" style="margin-left:8px" onclick="modalProgramar('${c.id}',${pi})">Editar</button></div>`:''}
+      </div>`).join('')}
+      <button class="btn" onclick="modalNovoPeriodo('${c.id}')" style="width:100%;justify-content:center"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Adicionar período aquisitivo</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarEdicaoColaborador('${c.id}')">Salvar alterações</button>
+    </div>
+  </div>`);
+};
+
+window.salvarEdicaoColaborador=async function(cid){
+  const c=DB.find(x=>x.id===cid);
+  c.nome=document.getElementById('e-nome').value.trim();
+  c.funcao=document.getElementById('e-funcao').value.trim();
+  c.depto=document.getElementById('e-depto').value.trim();
+  c.admissao=document.getElementById('e-admissao').value.trim();
+  c.cpf=document.getElementById('e-cpf').value.trim();
+  c.periodos.forEach((p,pi)=>{
+    p.saldo=+document.getElementById(`ep-saldo-${pi}`).value;
+    p.limite=document.getElementById(`ep-limite-${pi}`).value.trim();
+    p.gozo_ant=document.getElementById(`ep-gozo-${pi}`).value.trim();
+  });
+  await saveColaborador(c);
+  for(const p of c.periodos){ await savePeriodo(c.id, p); }
+  saveData();
+  closeModal();
+  toast('Dados do colaborador atualizados!','success');
+  if(currentPage==='colaboradores') renderColaboradores();
+  else renderPainel();
+};
+
+// ─── NOVO PERÍODO ─────────────────────────────────────────────────────
+window.modalNovoPeriodo=function(cid){
+  const c=DB.find(x=>x.id===cid);
+  showModal(`<div class="modal">
+    <div class="modal-header">
+      <div><h3>Adicionar Período Aquisitivo</h3><p>${c.nome}</p></div>
+      <button class="close-btn" onclick="closeModal()"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field"><label class="required">Início do PA</label><input type="date" class="fi" id="np-ini" onchange="autoNpLimite()"></div>
+        <div class="field"><label class="required">Fim do PA</label><input type="date" class="fi" id="np-fim" onchange="autoNpLimite()"></div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label class="required">Saldo de dias</label><input type="number" class="fi" id="np-saldo" value="30" min="1" max="30"></div>
+        <div class="field"><label class="required">Data Limite (CLT)</label><input type="date" class="fi" id="np-limite"></div>
+      </div>
+      <div class="form-grid cols-1">
+        <div class="field"><label>Gozo anterior registrado</label><input type="text" class="fi" id="np-gozo" placeholder="Ex.: 10/02/2026 a 11/03/2026 ou Não registrado"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarNovoPeriodo('${cid}')">Adicionar período</button>
+    </div>
+  </div>`);
+};
+
+window.autoNpLimite=function(){
+  const fim=document.getElementById('np-fim').value;
+  if(!fim)return;
+  const d=new Date(fim+'T12:00:00');
+  d.setFullYear(d.getFullYear()+1);
+  d.setDate(d.getDate()-1);
+  document.getElementById('np-limite').value=d.toISOString().slice(0,10);
+};
+
+window.salvarNovoPeriodo=async function(cid){
+  const ini=document.getElementById('np-ini').value;
+  const fim=document.getElementById('np-fim').value;
+  const saldo=+document.getElementById('np-saldo').value;
+  const limite=document.getElementById('np-limite').value;
+  const gozo=document.getElementById('np-gozo').value.trim();
+  if(!ini||!fim||!limite){toast('Preencha todos os campos obrigatórios.','error');return;}
+  const fmtBR=s=>new Date(s+'T12:00:00').toLocaleDateString('pt-BR');
+  const c=DB.find(x=>x.id===cid);
+  const novoPer={pa:`${fmtBR(ini)} a ${fmtBR(fim)}`,saldo,limite:fmtBR(limite),gozo_ant:gozo||'Não registrado',programacao:null,status_calc:null,obs_prog:''};
+  const res=await supaPost('periodos',[{colaborador_id:cid,pa:novoPer.pa,saldo:novoPer.saldo,limite:novoPer.limite,gozo_ant:novoPer.gozo_ant,programacao:null,status_calc:null,obs_prog:''}]);
+  if(res&&res[0]) novoPer._pid=res[0].id;
+  c.periodos.push(novoPer);
+  saveData();
+  closeModal();
+  toast('Período aquisitivo adicionado!','success');
+  modalEditarColaborador(cid);
+};
+
+window.removerPeriodo=async function(cid,pi){
+  if(!confirm('Remover este período aquisitivo? Esta ação não pode ser desfeita.'))return;
+  const c=DB.find(x=>x.id===cid);
+  const p=c.periodos[pi];
+  if(p._pid) await deletePeriodoDB(p._pid);
+  c.periodos.splice(pi,1);
+  saveData();
+  toast('Período removido.');
+  modalEditarColaborador(cid);
+};
+
+// ─── DESLIGAR / REATIVAR ─────────────────────────────────────────────
+window.confirmarDesligar=function(cid){
+  const c=DB.find(x=>x.id===cid);
+  showModal(`<div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <div><h3>Confirmar desligamento</h3><p>${c.nome}</p></div>
+      <button class="close-btn" onclick="closeModal()"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-danger"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><div>O colaborador será marcado como desligado e removido das listagens ativas. O histórico de férias será preservado. Esta ação pode ser revertida.</div></div>
+      <div class="form-grid cols-1" style="margin-top:12px">
+        <div class="field"><label>Data de desligamento</label><input type="date" class="fi" id="dt-desl" value="${HOJE.toISOString().slice(0,10)}"></div>
+        <div class="field"><label>Motivo</label><select class="fi" id="motivo-desl"><option>Demissão sem justa causa</option><option>Demissão por justa causa</option><option>Pedido de demissão</option><option>Término de contrato</option><option>Transferência</option></select></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-danger" onclick="desligar('${cid}')">Confirmar desligamento</button>
+    </div>
+  </div>`);
+};
+
+window.desligar=async function(cid){
+  const c=DB.find(x=>x.id===cid);
+  c.ativo=false;
+  c.desligamento={data:document.getElementById('dt-desl').value,motivo:document.getElementById('motivo-desl').value};
+  await saveColaborador(c);
+  saveData();
+  closeModal();
+  toast(`${c.nome} marcado(a) como desligado(a).`);
+  if(currentPage==='colaboradores') renderColaboradores();
+  else renderPainel();
+};
+
+window.reativar=async function(cid){
+  const c=DB.find(x=>x.id===cid);
+  c.ativo=true;
+  c.desligamento=null;
+  await saveColaborador(c);
+  saveData();
+  toast(`${c.nome} reativado(a) com sucesso!`,'success');
+  if(currentPage==='colaboradores') renderColaboradores();
+  else renderPainel();
+};
+
+// ─── PÁGINA FORMULÁRIO RH ────────────────────────────────────────────
+function renderFormulario(){
+  document.getElementById('topbar-actions').innerHTML='';
+  const ativos=DB.filter(c=>c.ativo);
+  const content=document.getElementById('content');
+  content.innerHTML=`
+  <div class="alert alert-info" style="margin-bottom:16px"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg><span>Selecione o colaborador e o período para gerar o <strong>Formulário de Movimentação de Pessoal – Férias</strong> no modelo Prima Qualitá, pronto para impressão e assinatura.</span></div>
+  <div style="background:var(--branco);border:1px solid var(--borda);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px">
+    <div class="form-grid">
+      <div class="field"><label class="required">Colaborador</label>
+        <select class="fi" id="of-col" onchange="ofCarregarPeriodos()">
+          <option value="">Selecione...</option>
+          ${ativos.sort((a,b)=>a.nome.localeCompare(b.nome)).map(c=>`<option value="${c.id}">${c.nome} (${c.id})</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label class="required">Período aquisitivo</label>
+        <select class="fi" id="of-pa"><option value="">— selecione o colaborador —</option></select>
+      </div>
+    </div>
+    <div class="form-grid" style="margin-top:10px">
+      <div class="field"><label class="required">Início do período concessivo</label><input type="date" class="fi" id="of-ini" onchange="ofRecalc()"></div>
+      <div class="field"><label>Término (calculado pelos dias de saldo)</label><input type="date" class="fi readonly-field" id="of-fim" readonly></div>
+    </div>
+    <div style="margin-top:12px"><button class="btn btn-primary" onclick="ofGerar()"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Gerar Formulário</button></div>
+  </div>
+  <div id="of-preview"></div>`;
+
+  window.ofCarregarPeriodos=function(){
+    const cid=document.getElementById('of-col').value;
+    const c=DB.find(x=>x.id===cid);
+    const sel=document.getElementById('of-pa');
+    if(!c){sel.innerHTML='<option>— selecione o colaborador —</option>';return;}
+    sel.innerHTML=c.periodos.map((p,i)=>`<option value="${i}">${p.pa} | Saldo: ${p.saldo}d | Limite: ${p.limite}</option>`).join('');
+    ofRecalc();
+  };
+
+  window.ofRecalc=function(){
+    const cid=document.getElementById('of-col').value;
+    const pi=document.getElementById('of-pa').value;
+    if(!cid||pi==='')return;
+    const p=DB.find(x=>x.id===cid).periodos[+pi];
+    const ini=document.getElementById('of-ini').value;
+    if(ini){
+      const d=new Date(ini+'T12:00:00');
+      const fim=addDays(d,p.saldo-1);
+      document.getElementById('of-fim').value=fim.toISOString().slice(0,10);
+    }
+  };
+
+  window.ofGerar=function(){
+    const cid=document.getElementById('of-col').value;
+    const pi=document.getElementById('of-pa').value;
+    const ini=document.getElementById('of-ini').value;
+    if(!cid||pi===''||!ini){toast('Preencha todos os campos obrigatórios.','error');return;}
+    modalFormulario(cid,+pi,ini);
+  };
+}
+
+// ─── MODAL FORMULÁRIO MOVIMENTAÇÃO DE PESSOAL ─────────────────────────
+window.modalFormulario=function(cid,pi,iniISO){
+  const c=DB.find(x=>x.id===cid);
+  const p=c.periodos[pi];
+  let iniD, fimD;
+  if(iniISO){
+    iniD=new Date(iniISO+'T12:00:00');
+    fimD=addDays(iniD,p.saldo-1);
+  } else if(p.programacao){
+    iniD=parseDate(p.programacao.inicio);
+    fimD=parseDate(p.programacao.fim);
+  } else {
+    const pedAte=calcPedidoAte(p.limite,p.saldo);
+    iniD=addDays(pedAte,60);
+    fimD=addDays(iniD,p.saldo-1);
+  }
+  const fmtForm=d=>{
+    const dd=String(d.getDate()).padStart(2,'0');
+    const mm=String(d.getMonth()+1).padStart(2,'0');
+    const yy=d.getFullYear();
+    return `${dd}-${mm}-${yy}`;
+  };
+  const dtAlteracao=fmtForm(HOJE);
+  const admissaoFmt=c.admissao.split('/').join('-');
+  const paFmt=p.pa.replace(/\//g,'-').replace(' a ','-').replace('--','-');
+  const paDisplay=p.pa.replace(/\//g,'-');
+
+  showModal(`<div class="modal" style="max-width:780px">
+    <div class="modal-header">
+      <div><h3>Formulário de Movimentação de Pessoal – Férias</h3><p>${c.nome} · ${p.pa}</p></div>
+      <button class="close-btn" onclick="closeModal()"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <div id="form-print-area" style="background:#fff;padding:24px;font-family:Arial,sans-serif;font-size:12px">
+        <!-- CABEÇALHO -->
+        <table width="100%" cellspacing="0" cellpadding="0" style="border:2px solid #1F4E79;border-collapse:collapse;margin-bottom:0">
+          <tr>
+            <td style="padding:10px 14px;width:160px;border-right:2px solid #1F4E79;vertical-align:middle">
+              <img src="data:image/png;base64,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" style="height:60px;display:block">
+            </td>
+            <td style="text-align:center;padding:10px;vertical-align:middle">
+              <div style="font-size:16px;font-weight:700;letter-spacing:.5px">FORMULÁRIO MOVIMENTAÇÃO DE PESSOAL</div>
+              <div style="font-size:11px;color:#555;margin-top:4px">Revisão 01/2026</div>
+            </td>
+          </tr>
+        </table>
+
+        <!-- DADOS DO FUNCIONÁRIO -->
+        <table width="100%" cellspacing="0" cellpadding="0" style="border:2px solid #1F4E79;border-top:none;border-collapse:collapse">
+          <tr><td colspan="2" style="background:#1F4E79;color:#fff;font-weight:700;font-size:11px;padding:5px 10px;text-align:center;letter-spacing:.08em">DADOS DO FUNCIONÁRIO</td></tr>
+          <tr><td colspan="2" style="padding:7px 10px;border-bottom:1px solid #ccc"><strong>Nome:</strong> ${c.nome.toUpperCase()}</td></tr>
+          <tr>
+            <td style="padding:7px 10px;border-right:1px solid #ccc;border-bottom:1px solid #ccc;width:50%"><strong>CPF:</strong> ${c.cpf||'___.___.___-__'}</td>
+            <td style="padding:7px 10px;border-bottom:1px solid #ccc"><strong>Função:</strong> ${c.funcao.toUpperCase()}</td>
+          </tr>
+          <tr>
+            <td style="padding:7px 10px;border-right:1px solid #ccc"><strong>Data de Admissão:</strong> ${admissaoFmt.replace(/\//g,'-')}</td>
+            <td style="padding:7px 10px"><strong>Data da Alteração:</strong> ${dtAlteracao}</td>
+          </tr>
+        </table>
+
+        <!-- MOTIVO DA ALTERAÇÃO -->
+        <table width="100%" cellspacing="0" cellpadding="0" style="border:2px solid #1F4E79;border-top:none;border-collapse:collapse">
+          <tr><td colspan="2" style="background:#1F4E79;color:#fff;font-weight:700;font-size:11px;padding:5px 10px;text-align:center;letter-spacing:.08em">MOTIVO DA ALTERAÇÃO</td></tr>
+          <tr>
+            <td style="padding:8px 10px;width:50%;vertical-align:top;border-right:1px solid #ccc">
+              <div style="margin-bottom:5px">( &nbsp;) Transferência</div>
+              <div style="margin-bottom:5px">( &nbsp;) Promoção</div>
+              <div style="margin-bottom:5px">( &nbsp;) Mudança de turno</div>
+              <div style="margin-bottom:5px;color:#1F4E79;font-weight:700">( X ) Férias</div>
+              <div>( &nbsp;) Enquadramento Salarial</div>
+            </td>
+            <td style="padding:8px 10px;vertical-align:top">
+              <div style="margin-bottom:5px">( &nbsp;) Demissão &nbsp;&nbsp; PCD ( &nbsp;) Sim &nbsp;( &nbsp;) Não</div>
+              <div style="margin-bottom:5px">( &nbsp;) Alteração de Função</div>
+              <div style="margin-bottom:5px">( &nbsp;) Aumento de Carga Horária</div>
+              <div style="margin-bottom:5px">( &nbsp;) Redução de Carga Horária</div>
+              <div>( &nbsp;) Outros: _______________</div>
+            </td>
+          </tr>
+        </table>
+
+        <!-- INFORMAÇÕES PARA MOVIMENTAÇÕES -->
+        <table width="100%" cellspacing="0" cellpadding="0" style="border:2px solid #1F4E79;border-top:none;border-collapse:collapse">
+          <tr><td colspan="2" style="background:#1F4E79;color:#fff;font-weight:700;font-size:11px;padding:5px 10px;text-align:center;letter-spacing:.08em">INFORMAÇÕES PARA MOVIMENTAÇÕES</td></tr>
+          <tr><td colspan="2" style="padding:5px 10px;border-bottom:1px solid #eee"><strong>Área/ Unidade de Origem:</strong></td></tr>
+          <tr><td colspan="2" style="padding:5px 10px;border-bottom:1px solid #eee"><strong>Área/ Unidade de Destino:</strong></td></tr>
+          <tr>
+            <td style="padding:5px 10px;border-right:1px solid #eee;border-bottom:1px solid #eee"><strong>Cargo Atual:</strong></td>
+            <td style="padding:5px 10px;border-bottom:1px solid #eee"><strong>Cargo Proposto:</strong></td>
+          </tr>
+          <tr>
+            <td style="padding:5px 10px;border-right:1px solid #eee;border-bottom:1px solid #eee"><strong>Salário Atual:</strong></td>
+            <td style="padding:5px 10px;border-bottom:1px solid #eee"><strong>Salário Proposto:</strong></td>
+          </tr>
+          <tr>
+            <td style="padding:5px 10px;border-right:1px solid #eee;border-bottom:1px solid #ccc"><strong>Carga Horária Atual:</strong></td>
+            <td style="padding:5px 10px;border-bottom:1px solid #ccc"><strong>Carga Horária Proposta:</strong></td>
+          </tr>
+
+          <!-- FÉRIAS E DESLIGAMENTO -->
+          <tr>
+            <td style="padding:8px 10px;border-right:1px solid #ccc;vertical-align:top;width:22%"><strong>Férias</strong></td>
+            <td style="padding:0;vertical-align:top">
+              <table width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="padding:8px 10px;border-right:1px solid #eee;border-bottom:1px solid #eee;width:50%;vertical-align:top">
+                    <div style="font-size:11px;color:#555;margin-bottom:3px">Período Aquisitivo:</div>
+                    <div style="font-weight:700">${p.pa.split('/').join('-')}</div>
+                  </td>
+                  <td style="padding:8px 10px;border-bottom:1px solid #eee;vertical-align:top">
+                    <div style="font-size:11px;color:#555;margin-bottom:3px">Período Concessivo:</div>
+                    <div style="font-weight:700">${fmtForm(iniD)} A ${fmtForm(fimD)}</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- DESLIGAMENTO -->
+          <tr>
+            <td style="padding:8px 10px;border-right:1px solid #ccc;border-top:1px solid #ccc;vertical-align:top"><strong>Desligamento</strong></td>
+            <td style="padding:0;border-top:1px solid #ccc">
+              <table width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="padding:8px 10px;border-right:1px solid #eee;width:50%;vertical-align:top">
+                    <div style="margin-bottom:4px">( &nbsp;) Iniciativa da Instituição</div>
+                    <div style="height:12px"></div>
+                    <div style="margin-bottom:4px">( &nbsp;) Pedido de Demissão</div>
+                    <div style="height:12px"></div>
+                    <div>( &nbsp;) Justa Causa</div>
+                  </td>
+                  <td style="padding:8px 10px;vertical-align:top">
+                    <div style="margin-bottom:4px">( &nbsp;) Aviso Indenizado</div>
+                    <div style="margin-bottom:4px">( &nbsp;) Aviso Trabalhado</div>
+                    <div style="margin-bottom:4px">( &nbsp;) Término do Contrato</div>
+                    <div style="height:4px"></div>
+                    <div style="margin-bottom:4px">( &nbsp;) Aviso Descontado</div>
+                    <div style="margin-bottom:4px">( &nbsp;) Aviso Trabalhado</div>
+                    <div style="margin-bottom:4px">( &nbsp;) Término do Contrato</div>
+                    <div style="margin-top:4px">Motivo:</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <!-- VALIDAÇÃO EMPRESA -->
+        <table width="100%" cellspacing="0" cellpadding="0" style="border:2px solid #1F4E79;border-top:none;border-collapse:collapse">
+          <tr><td colspan="3" style="background:#1F4E79;color:#fff;font-weight:700;font-size:11px;padding:5px 10px;text-align:center;letter-spacing:.08em">PARA VALIDAÇÃO DA EMPRESA</td></tr>
+          <tr>
+            <td style="padding:28px 10px 10px;text-align:center;border-right:1px solid #ccc;width:33%">
+              <div style="border-top:1px solid #333;width:80%;margin:0 auto 6px"></div>
+              <div style="font-weight:700;font-size:11px">SOLICITANTE</div>
+              <div style="font-size:10px;color:#555">Mírian Vicente Dias</div>
+              <div style="font-size:10px;color:#555;margin-top:4px">___ / ___ / ______</div>
+            </td>
+            <td style="padding:28px 10px 10px;text-align:center;border-right:1px solid #ccc;width:33%">
+              <div style="border-top:1px solid #333;width:80%;margin:0 auto 6px"></div>
+              <div style="font-weight:700;font-size:11px">GERENTE RH/DP</div>
+              <div style="font-size:10px;color:#555;margin-top:4px">___ / ___ / ______</div>
+            </td>
+            <td style="padding:28px 10px 10px;text-align:center;width:33%">
+              <div style="border-top:1px solid #333;width:80%;margin:0 auto 6px"></div>
+              <div style="font-weight:700;font-size:11px">GESTOR DO CONTRATO</div>
+              <div style="font-size:10px;color:#555">Carlos Henrique Buzzi da Silva</div>
+              <div style="font-size:10px;color:#555;margin-top:4px">___ / ___ / ______</div>
+            </td>
+          </tr>
+        </table>
+
+        <!-- VALIDAÇÃO RH -->
+        <table width="100%" cellspacing="0" cellpadding="0" style="border:2px solid #1F4E79;border-top:none;border-collapse:collapse">
+          <tr><td colspan="2" style="background:#1F4E79;color:#fff;font-weight:700;font-size:11px;padding:5px 10px;text-align:center;letter-spacing:.08em">PARA VALIDAÇÃO DO RH</td></tr>
+          <tr>
+            <td style="padding:28px 10px 10px;text-align:center;border-right:1px solid #ccc;width:33%">
+              <div style="border-top:1px solid #333;width:80%;margin:0 auto 6px"></div>
+              <div style="font-weight:700;font-size:11px">ANALISTA DE RH</div>
+              <div style="font-size:10px;color:#555;margin-top:4px">___ / ___ / ______</div>
+            </td>
+            <td style="padding:10px;vertical-align:top">
+              <div style="font-weight:700;font-size:11px;margin-bottom:6px">OBSERVAÇÕES:</div>
+              <div style="border:1px solid #ccc;height:50px;border-radius:4px"></div>
+            </td>
+          </tr>
+        </table>
+
+        <div style="text-align:center;font-size:10px;color:#888;margin-top:8px">
+          Hospital Municipal de Cordeiro · Contrato de Gestão nº 196/2025 · Prima Qualitá Saúde
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Fechar</button>
+      <button class="btn btn-primary" onclick="imprimirFormulario()">🖨️ Imprimir / Salvar PDF</button>
+    </div>
+  </div>`);
+};
+
+window.imprimirFormulario=function(){
+  const area=document.getElementById('form-print-area');
+  const w=window.open('','_blank','width=850,height=1100');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Formulário Férias</title>
+  <style>body{margin:20px;font-family:Arial,sans-serif}@media print{body{margin:0}}</style>
+  </head><body>${area.innerHTML}<script>window.onload=function(){window.print();}<\/script></body></html>`);
+  w.document.close();
+};
+
+// ─── PREVISÃO 2027 ────────────────────────────────────────────────────
+function renderPrev2027(){
+  document.getElementById('topbar-actions').innerHTML='';
+  const content=document.getElementById('content');
+
+  // Coletar todos os períodos com limite em 2027 ou com PA terminando em 2026/2027
+  const rows=[];
+  DB.filter(c=>c.ativo).forEach(c=>{
+    c.periodos.forEach((p,pi)=>{
+      const limD=parseDate(p.limite);
+      const limAno=limD?limD.getFullYear():0;
+      // Inclui: limite em 2027, ou limite em 2028 com PA que cobre 2026-2027
+      if(limAno===2027 || limAno===2028){
+        const pedAte=calcPedidoAte(p.limite,p.saldo);
+        const status=p.programacao?(p.status_calc||'PROGRAMADO'):calcStatus(p);
+        rows.push({c,p,pi,limD,pedAte,status,limAno});
+      }
+    });
+  });
+
+  // Agrupar por trimestre do limite
+  const grupos={
+    'Jan–Mar 2027':[],
+    'Abr–Jun 2027':[],
+    'Jul–Set 2027':[],
+    'Out–Dez 2027':[],
+    '2028+':[],
+  };
+  rows.forEach(r=>{
+    const m=r.limD.getMonth()+1;
+    const a=r.limD.getFullYear();
+    if(a>=2028) grupos['2028+'].push(r);
+    else if(m<=3) grupos['Jan–Mar 2027'].push(r);
+    else if(m<=6) grupos['Abr–Jun 2027'].push(r);
+    else if(m<=9) grupos['Jul–Set 2027'].push(r);
+    else grupos['Out–Dez 2027'].push(r);
+  });
+
+  const totalRows=rows.length;
+  const comProg=rows.filter(r=>r.p.programacao).length;
+  const semProg=rows.filter(r=>!r.p.programacao).length;
+
+  let html2=`
+  <div class="stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
+    <div class="stat-card"><div class="stat-icon" style="background:var(--azul-c)"><svg fill="none" stroke="var(--azul)" stroke-width="2" viewBox="0 0 24 24" style="width:22px;height:22px"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div><div class="stat-n" style="color:var(--azul)">${totalRows}</div><div class="stat-l">Períodos a vencer em 2027+</div></div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:var(--verde-c)"><svg fill="none" stroke="var(--verde)" stroke-width="2" viewBox="0 0 24 24" style="width:22px;height:22px"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div><div class="stat-n" style="color:var(--verde)">${comProg}</div><div class="stat-l">Com programação definida</div></div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:var(--laranja-c)"><svg fill="none" stroke="#BF8F00" stroke-width="2" viewBox="0 0 24 24" style="width:22px;height:22px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><div><div class="stat-n" style="color:#BF8F00">${semProg}</div><div class="stat-l">Sem programação ainda</div></div></div>
+  </div>
+  <div class="alert alert-info" style="margin-bottom:16px"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg><span>Para enviar o pedido com <strong>60 dias de antecedência</strong>, o formulário deve ser enviado à Prima Qualitá até a data indicada na coluna <em>Enviar pedido até</em>. Clique em <strong>Programar</strong> para definir as datas e gerar o formulário.</span></div>`;
+
+  Object.entries(grupos).forEach(([titulo, lista])=>{
+    if(!lista.length) return;
+    lista.sort((a,b)=>a.limD-b.limD);
+    html2+=`<div style="margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <div style="font-size:13px;font-weight:700;color:var(--azul);text-transform:uppercase;letter-spacing:.06em">${titulo}</div>
+      <div style="flex:1;height:1px;background:var(--azul-c)"></div>
+      <div class="badge badge-blue">${lista.length} colaborador(es)</div>
+    </div>
+    <div class="tbl-wrap"><table>
+    <thead><tr>
+      <th style="width:5%">Contr.</th>
+      <th style="width:25%">Nome</th>
+      <th style="width:14%">Função</th>
+      <th style="width:18%">Período Aquisitivo</th>
+      <th style="width:6%;text-align:center">Saldo</th>
+      <th style="width:11%">Data Limite</th>
+      <th style="width:12%">Enviar pedido até</th>
+      <th style="width:9%">Status</th>
+      <th class="col-act">Ações</th>
+    </tr></thead><tbody>
+    ${lista.map(({c,p,pi,pedAte,status})=>`<tr>
+      <td style="font-size:11px;color:var(--texto2)">${c.id}</td>
+      <td class="col-name">${c.nome}</td>
+      <td style="font-size:12px;color:var(--texto2)">${c.funcao}</td>
+      <td style="font-size:12px">${p.pa}</td>
+      <td style="text-align:center;font-weight:600">${p.saldo}d</td>
+      <td style="font-size:12px;font-weight:500">${p.limite}</td>
+      <td style="font-size:12px">${prazoHTML(pedAte)}</td>
+      <td>${badgeHTML(p.programacao?(p.status_calc||'PROGRAMADO'):status)}</td>
+      <td class="col-act"><div style="display:flex;gap:4px">
+        <button class="btn btn-sm btn-primary" onclick="modalProgramar('${c.id}',${pi})">📅 Programar</button>
+        <button class="btn btn-sm" onclick="modalFormulario('${c.id}',${pi})">📋</button>
+      </div></td>
+    </tr>`).join('')}
+    </tbody></table></div></div>`;
+  });
+
+  content.innerHTML=html2;
+  updateCounts();
+}
+
+// ─── SEED MANUAL ─────────────────────────────────────────────────────
+window.forcarSeed = async function(){
+  if(!confirm('Carregar os 94 colaboradores no banco? Isso pode levar alguns segundos.')) return;
+  await seedDatabase();
+  renderPainel();
+};
+
+// ─── UTILITÁRIOS EXTRAS ──────────────────────────────────────────────
+window.fmtCpf=function(el){
+  let v=el.value.replace(/\D/g,'');
+  if(v.length>11)v=v.slice(0,11);
+  if(v.length>9) v=v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/,'$1.$2.$3-$4');
+  else if(v.length>6) v=v.replace(/(\d{3})(\d{3})(\d{1,3})/,'$1.$2.$3');
+  else if(v.length>3) v=v.replace(/(\d{3})(\d{1,3})/,'$1.$2');
+  el.value=v;
+  // Alerta de CPF duplicado em tempo real
+  const cpfLimpo=v.replace(/\D/g,'');
+  const aviso=document.getElementById('cpf-dup-warn');
+  if(cpfLimpo.length===11){
+    const dup=DB.find(c=>c.ativo&&(c.cpf||'').replace(/\D/g,'')===cpfLimpo);
+    if(dup&&aviso){
+      aviso.style.display='flex';
+      aviso.querySelector('span').textContent=`⚠️ Este CPF já está cadastrado para: ${dup.nome} (Contrato ${dup.id})`;
+    } else if(aviso){
+      aviso.style.display='none';
+    }
+  } else if(aviso){
+    aviso.style.display='none';
+  }
+};
+
+// ─── BOOT ─────────────────────────────────────────────────────────────
+// ─── SEED MANUAL ─────────────────────────────────────────────────────
+window.forcarSeed = async function(){
+  if(!confirm('Carregar os 94 colaboradores no banco? Isso pode levar alguns segundos.')) return;
+  await seedDatabase();
+  renderPainel();
+};
+
+// ─── UTILITÁRIOS EXTRAS ──────────────────────────────────────────────
+window.fmtCpf=function(el){
+  let v=el.value.replace(/\D/g,'');
+  if(v.length>11)v=v.slice(0,11);
+  if(v.length>9) v=v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/,'$1.$2.$3-$4');
+  else if(v.length>6) v=v.replace(/(\d{3})(\d{3})(\d{1,3})/,'$1.$2.$3');
+  else if(v.length>3) v=v.replace(/(\d{3})(\d{1,3})/,'$1.$2');
+  el.value=v;
+  // Alerta de CPF duplicado em tempo real
+  const cpfLimpo=v.replace(/\D/g,'');
+  const aviso=document.getElementById('cpf-dup-warn');
+  if(cpfLimpo.length===11){
+    const dup=DB.find(c=>c.ativo&&(c.cpf||'').replace(/\D/g,'')===cpfLimpo);
+    if(dup&&aviso){
+      aviso.style.display='flex';
+      aviso.querySelector('span').textContent=`⚠️ Este CPF já está cadastrado para: ${dup.nome} (Contrato ${dup.id})`;
+    } else if(aviso){
+      aviso.style.display='none';
+    }
+  } else if(aviso){
+    aviso.style.display='none';
+  }
+};
+
+// ─── BOOT ─────────────────────────────────────────────────────────────
+loadData().then(()=>{
+  goPage('painel', document.querySelector('.nav-item[data-page="painel"]'));
+});
+</script>
+</body>
+</html>
