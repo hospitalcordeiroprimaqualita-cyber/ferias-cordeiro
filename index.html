@@ -916,18 +916,18 @@ function renderPainel(){
     Carregando indicadores...
   </div>`;
 
-  // Carregar dados em paralelo
+  // Mostrar dashboard imediatamente com dados do DB
+  // Tabelas RH carregam em paralelo e atualizam
+  buildDashboard([],[],[],[],[],[]);
   Promise.all([
-    rhGet('licencas'),
-    rhGet('asos'),
-    rhGet('atestados'),
-    rhGet('movimentacoes'),
-    rhGet('vacinas'),
-    rhGet('registros_profissionais'),
+    rhGet('licencas').catch(()=>[]),
+    rhGet('asos').catch(()=>[]),
+    rhGet('atestados').catch(()=>[]),
+    rhGet('movimentacoes').catch(()=>[]),
+    rhGet('vacinas').catch(()=>[]),
+    rhGet('registros_profissionais').catch(()=>[]),
   ]).then(([licencas,asos,atestados,movs,vacinas,regs])=>{
     buildDashboard(licencas,asos,atestados,movs,vacinas,regs);
-  }).catch(()=>{
-    buildDashboard([],[],[],[],[],[]);
   });
 }
 
@@ -965,7 +965,8 @@ function buildDashboard(licencas,asos,atestados,movs,vacinas,regs){
     c.periodos.forEach(p=>{
       const st=p.programacao?(p.status_calc||'PROGRAMADO'):calcStatus(p);
       if(['VENCIDO','URGENTE'].includes(st)){
-        proximosFerias.push({nome:c.nome,limite:p.limite,dias:diffDays(p.limite),st});
+        const dLim = p.limite ? diasAteDate(p.limite) : 999;
+        proximosFerias.push({nome:c.nome,limite:p.limite,dias:dLim,st});
       }
     });
   });
