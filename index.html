@@ -200,7 +200,6 @@ tr:hover td{background:#FAFCFF}
   .content{padding:0}
 }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -936,83 +935,138 @@ function buildDashboard(licencas,asos,atestados,movs,vacinas,regs){
   const content = document.getElementById('content');
   const ativos = DB.filter(c=>c.ativo);
   const total = ativos.length;
-  const hoje = HOJE;
 
-  // ── KPIs de Férias ────────────────────────────────────────────────
-  let fVencidas=0, fUrgentes=0, fAndamento=0, fProgramadas=0, fSemProg=0;
+  // ── KPIs Férias ─────────────────────────────────────────────────────
+  let fVencidas=0,fUrgentes=0,fAndamento=0,fProgramadas=0,fSemProg=0;
   ativos.forEach(c=>{
     c.periodos.forEach(p=>{
-      const st = p.programacao?(p.status_calc||'PROGRAMADO'):calcStatus(p);
-      if(st==='VENCIDO') fVencidas++;
-      else if(st==='URGENTE'||st==='ALERTA') fUrgentes++;
-      else if(st==='EM ANDAMENTO') fAndamento++;
-      else if(st==='PROGRAMADO') fProgramadas++;
+      const st=p.programacao?(p.status_calc||'PROGRAMADO'):calcStatus(p);
+      if(st==='VENCIDO')fVencidas++;
+      else if(st==='URGENTE'||st==='ALERTA')fUrgentes++;
+      else if(st==='EM ANDAMENTO')fAndamento++;
+      else if(st==='PROGRAMADO')fProgramadas++;
       else fSemProg++;
     });
   });
 
-  // ── KPIs Gerais ────────────────────────────────────────────────────
-  const licAtivas = licencas.filter(l=>!l.fim).length;
-  const atestMes = atestados.filter(a=>{
-    if(!a.data) return false;
+  // ── KPIs Gerais ───────────────────────────────────────────────────
+  const licAtivas=licencas.filter(l=>!l.fim).length;
+  const atestMes=atestados.filter(a=>{
+    if(!a.data)return false;
     const p=a.data.split('/');
     const d=new Date(+p[2],+p[1]-1,+p[0]);
-    return d.getMonth()===hoje.getMonth()&&d.getFullYear()===hoje.getFullYear();
+    return d.getMonth()===HOJE.getMonth()&&d.getFullYear()===HOJE.getFullYear();
   }).length;
-  const asoVenc = asos.filter(a=>diasAteDate(a.prox)!==null&&diasAteDate(a.prox)<0).length;
-  const asoUrg = asos.filter(a=>{const d=diasAteDate(a.prox);return d!==null&&d>=0&&d<=30;}).length;
-
-  // ── Férias por status (donut) ──────────────────────────────────────
-  // ── Afastamentos ativos ────────────────────────────────────────────
-  const licTipos={};
-  licencas.filter(l=>!l.fim).forEach(l=>{
-    const t=(l.tipo||'Outros').split(' ').slice(0,2).join(' ');
-    licTipos[t]=(licTipos[t]||0)+1;
-  });
-
-  // ── Movimentações por motivo ───────────────────────────────────────
-  const movMotivos={};
-  movs.forEach(m=>{movMotivos[m.motivo]=(movMotivos[m.motivo]||0)+1;});
-
-  // ── Atestados últimos 6 meses ──────────────────────────────────────
-  const atesMeses=Array.from({length:6},(_,i)=>{
-    const d=new Date(hoje.getFullYear(),hoje.getMonth()-5+i,1);
-    return{label:`${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`,m:d.getMonth(),y:d.getFullYear(),count:0};
-  });
-  atestados.forEach(a=>{
-    if(!a.data)return;
-    const p=a.data.split('/');
-    const d=new Date(+p[2],+p[1]-1,+p[0]);
-    const slot=atesMeses.find(s=>s.m===d.getMonth()&&s.y===d.getFullYear());
-    if(slot)slot.count++;
-  });
-
-  // ── Colaboradores por setor ────────────────────────────────────────
-  const setores={};
-  ativos.forEach(c=>{setores[c.depto]=(setores[c.depto]||0)+1;});
-  const setoresSort=Object.entries(setores).sort((a,b)=>b[1]-a[1]).slice(0,8);
-
-  // ── Próximos a vencer (férias 60d) ────────────────────────────────
+  const asoVenc=asos.filter(a=>diasAteDate(a.prox)!==null&&diasAteDate(a.prox)<0).length;
+  const asoUrg=asos.filter(a=>{const d=diasAteDate(a.prox);return d!==null&&d>=0&&d<=30;}).length;
+  const licAtivasList=licencas.filter(l=>!l.fim).map(l=>({nome:nomeColab(l.colaborador_id),tipo:l.tipo||'Licença',inicio:l.inicio}));
   const proximosFerias=[];
   ativos.forEach(c=>{
     c.periodos.forEach(p=>{
       const st=p.programacao?(p.status_calc||'PROGRAMADO'):calcStatus(p);
       if(['VENCIDO','URGENTE'].includes(st)){
-        const d=diasAteDate(p.limite);
-        proximosFerias.push({nome:c.nome,limite:p.limite,dias:d,st});
+        proximosFerias.push({nome:c.nome,limite:p.limite,dias:diffDays(p.limite),st});
       }
     });
   });
   proximosFerias.sort((a,b)=>a.dias-b.dias);
 
-  // ── Licenças ativas ────────────────────────────────────────────────
-  const licAtivasList=licencas.filter(l=>!l.fim).map(l=>({
-    nome:nomeColab(l.colaborador_id),tipo:l.tipo||'Licença',inicio:l.inicio
-  }));
+  // ── Setores ───────────────────────────────────────────────────────
+  const setores={};
+  ativos.forEach(c=>{setores[c.depto]=(setores[c.depto]||0)+1;});
+  const setoresSort=Object.entries(setores).sort((a,b)=>b[1]-a[1]).slice(0,7);
 
-  // ── HTML DO DASHBOARD ──────────────────────────────────────────────
+  // ── Atestados 6 meses ─────────────────────────────────────────────
+  const atesMeses=Array.from({length:6},(_,i)=>{
+    const d=new Date(HOJE.getFullYear(),HOJE.getMonth()-5+i,1);
+    return{label:`${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`,m:d.getMonth(),y:d.getFullYear(),count:0};
+  });
+  atestados.forEach(a=>{
+    if(!a.data)return;
+    const p=a.data.split('/');
+    const d=new Date(+p[2],+p[1]-1,+p[0]);
+    const sl=atesMeses.find(s=>s.m===d.getMonth()&&s.y===d.getFullYear());
+    if(sl)sl.count++;
+  });
+
+  // ── Movimentações por tipo ────────────────────────────────────────
+  const MLABEL={ferias:'Férias',transferencia:'Transferência',promocao:'Promoção',
+    mudanca_turno:'Mudança de Turno',enquadramento:'Enquadramento',alteracao_funcao:'Alt. Função',
+    aumento_carga:'↑ Carga',reducao_carga:'↓ Carga',demissao:'Demissão',outros:'Outros'};
+  const movMotivos={};
+  movs.forEach(m=>{movMotivos[m.motivo]=(movMotivos[m.motivo]||0)+1;});
+  const movEntries=Object.entries(movMotivos).sort((a,b)=>b[1]-a[1]);
+
+  // ── SVG HELPERS ───────────────────────────────────────────────────
+  function svgDonut(dados,cores,w=180,h=180){
+    const total=dados.reduce((s,d)=>s+d.v,0);
+    if(total===0)return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><circle cx="${w/2}" cy="${h/2}" r="60" fill="none" stroke="#eee" stroke-width="28"/><text x="${w/2}" y="${h/2+5}" text-anchor="middle" font-size="12" fill="#999">Sem dados</text></svg>`;
+    const cx=w/2,cy=h/2,r=60,sw=28;
+    let ang=-Math.PI/2,paths='';
+    dados.forEach((d,i)=>{
+      if(!d.v)return;
+      const slice=(d.v/total)*2*Math.PI;
+      const x1=cx+r*Math.cos(ang),y1=cy+r*Math.sin(ang);
+      const x2=cx+r*Math.cos(ang+slice),y2=cy+r*Math.sin(ang+slice);
+      const large=slice>Math.PI?1:0;
+      paths+=`<path d="M${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2}" fill="none" stroke="${cores[i%cores.length]}" stroke-width="${sw}" stroke-linecap="butt"/>`;
+      ang+=slice;
+    });
+    return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${paths}<text x="${cx}" y="${cy-6}" text-anchor="middle" font-size="22" font-weight="bold" fill="#1F4E79">${total}</text><text x="${cx}" y="${cy+14}" text-anchor="middle" font-size="10" fill="#888">total</text></svg>`;
+  }
+
+  function svgBar(dados,cor='#2E75B6',w=340,h=160){
+    if(!dados.length)return`<svg width="${w}" height="${h}"><text x="${w/2}" y="${h/2}" text-anchor="middle" fill="#999" font-size="12">Sem dados</text></svg>`;
+    const max=Math.max(...dados.map(d=>d.v),1);
+    const bw=Math.floor((w-40)/dados.length)-6;
+    const hh=h-40;
+    let bars='',labels='',vals='';
+    dados.forEach((d,i)=>{
+      const bh=Math.round((d.v/max)*hh)||2;
+      const x=20+i*(bw+6);
+      const y=h-30-bh;
+      bars+=`<rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="3" fill="${cor}" opacity=".85"/>`;
+      vals+=`<text x="${x+bw/2}" y="${y-4}" text-anchor="middle" font-size="10" fill="#1F4E79" font-weight="600">${d.v||''}</text>`;
+      const lbl=d.l.length>6?d.l.slice(0,6):d.l;
+      labels+=`<text x="${x+bw/2}" y="${h-8}" text-anchor="middle" font-size="9" fill="#666">${lbl}</text>`;
+    });
+    return`<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${bars}${vals}${labels}</svg>`;
+  }
+
+  function svgHBar(dados,w=320,h=200){
+    if(!dados.length)return`<svg width="${w}" height="${h}"><text x="${w/2}" y="${h/2}" text-anchor="middle" fill="#999" font-size="12">Sem dados</text></svg>`;
+    const max=Math.max(...dados.map(d=>d.v),1);
+    const rowH=Math.floor((h-10)/dados.length);
+    const CORES=['#1F4E79','#2E75B6','#375623','#7030A0','#BF8F00','#C00000','#00B050'];
+    let bars='';
+    dados.forEach((d,i)=>{
+      const bw=Math.round((d.v/max)*(w-110))||2;
+      const y=10+i*rowH;
+      const lbl=d.l.length>14?d.l.slice(0,14)+'…':d.l;
+      bars+=`<text x="0" y="${y+rowH/2+4}" font-size="10" fill="#444">${lbl}</text>`;
+      bars+=`<rect x="105" y="${y+3}" width="${bw}" height="${rowH-8}" rx="3" fill="${CORES[i%CORES.length]}" opacity=".8"/>`;
+      bars+=`<text x="${105+bw+4}" y="${y+rowH/2+4}" font-size="10" fill="#1F4E79" font-weight="600">${d.v}</text>`;
+    });
+    return`<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${bars}</svg>`;
+  }
+
+  function svgLegend(items,cores){
+    return items.map((it,i)=>`
+    <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--texto2)">
+      <div style="width:10px;height:10px;border-radius:2px;background:${cores[i%cores.length]};flex-shrink:0"></div>
+      <span>${it.l} <strong style="color:var(--texto)">${it.v}</strong></span>
+    </div>`).join('');
+  }
+
+  const COR_FERIAS=['#C00000','#FF9900','#375623','#7030A0','#BFBFBF'];
+  const dadosFerias=[
+    {l:'Vencidas',v:fVencidas},{l:'Urgentes',v:fUrgentes},
+    {l:'Programadas',v:fProgramadas},{l:'Em andamento',v:fAndamento},{l:'Sem prog.',v:fSemProg}
+  ];
+  const CORES_MOV=['#1F4E79','#2E75B6','#70AD47','#FF9900','#C00000','#7030A0','#00B050','#BF8F00'];
+
   content.innerHTML=`
-  <!-- LINHA 1: KPIs principais -->
+  <!-- KPIs linha 1 -->
   <div class="dash-grid">
     <div class="kpi-card">
       <div class="kpi-icon" style="background:#E8F4FD">
@@ -1021,7 +1075,7 @@ function buildDashboard(licencas,asos,atestados,movs,vacinas,regs){
       <div>
         <div class="kpi-val" style="color:var(--azul)">${total}</div>
         <div class="kpi-lbl">Colaboradores ativos</div>
-        <div class="kpi-sub" style="color:var(--verde)">${licAtivas > 0 ? licAtivas+' em licença' : 'Sem afastamentos'}</div>
+        <div class="kpi-sub" style="color:${licAtivas>0?'#7030A0':'var(--verde)'}">${licAtivas>0?licAtivas+' em licença':'Sem afastamentos'}</div>
       </div>
     </div>
     <div class="kpi-card" onclick="goPage('criticos',document.querySelector('[data-page=criticos]'))" style="cursor:pointer">
@@ -1041,7 +1095,7 @@ function buildDashboard(licencas,asos,atestados,movs,vacinas,regs){
       <div>
         <div class="kpi-val" style="color:#7030A0">${licAtivas}</div>
         <div class="kpi-lbl">Em licença/afastamento</div>
-        <div class="kpi-sub" style="color:var(--texto2)">${licencas.length} registros total</div>
+        <div class="kpi-sub" style="color:var(--texto2)">${licencas.length} total</div>
       </div>
     </div>
     <div class="kpi-card" onclick="goPage('atestados',document.querySelector('[data-page=atestados]'))" style="cursor:pointer">
@@ -1051,12 +1105,12 @@ function buildDashboard(licencas,asos,atestados,movs,vacinas,regs){
       <div>
         <div class="kpi-val" style="color:#BF8F00">${atestMes}</div>
         <div class="kpi-lbl">Atestados este mês</div>
-        <div class="kpi-sub" style="color:var(--texto2)">${atestados.length} total registrados</div>
+        <div class="kpi-sub" style="color:var(--texto2)">${atestados.length} total</div>
       </div>
     </div>
   </div>
 
-  <!-- LINHA 2: KPIs secundários -->
+  <!-- KPIs linha 2 -->
   <div class="dash-grid">
     <div class="kpi-card" onclick="goPage('asos',document.querySelector('[data-page=asos]'))" style="cursor:pointer">
       <div class="kpi-icon" style="background:#FFEBEB">
@@ -1075,7 +1129,7 @@ function buildDashboard(licencas,asos,atestados,movs,vacinas,regs){
       <div>
         <div class="kpi-val" style="color:var(--verde)">${fProgramadas}</div>
         <div class="kpi-lbl">Férias programadas</div>
-        <div class="kpi-sub" style="color:var(--roxo)">${fAndamento} em andamento</div>
+        <div class="kpi-sub" style="color:#7030A0">${fAndamento} em andamento</div>
       </div>
     </div>
     <div class="kpi-card">
@@ -1084,188 +1138,119 @@ function buildDashboard(licencas,asos,atestados,movs,vacinas,regs){
       </div>
       <div>
         <div class="kpi-val" style="color:var(--azul)">${movs.length}</div>
-        <div class="kpi-lbl">Movimentações registradas</div>
+        <div class="kpi-lbl">Movimentações</div>
         <div class="kpi-sub" style="color:var(--texto2)">${movs.filter(m=>m.motivo==='ferias').length} de férias</div>
       </div>
     </div>
     <div class="kpi-card">
       <div class="kpi-icon" style="background:var(--cinza-c)">
-        <svg fill="none" stroke="var(--cinza)" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <svg fill="none" stroke="#888" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       </div>
       <div>
-        <div class="kpi-val" style="color:var(--cinza)">${fSemProg}</div>
-        <div class="kpi-lbl">Férias sem programação</div>
+        <div class="kpi-val" style="color:#888">${fSemProg}</div>
+        <div class="kpi-lbl">Sem programação</div>
         <div class="kpi-sub" style="color:var(--texto2)">períodos ativos</div>
       </div>
     </div>
   </div>
 
-  <!-- LINHA 3: Gráficos principais -->
-  <div class="dash-grid-3">
+  <!-- Gráficos linha 1 -->
+  <div class="dash-grid-3" style="align-items:start">
     <div class="chart-card">
       <h3>Situação das Férias <span>por período</span></h3>
-      <canvas id="chart-ferias" height="200"></canvas>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="flex-shrink:0">${svgDonut(dadosFerias,COR_FERIAS,160,160)}</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          ${svgLegend(dadosFerias,COR_FERIAS)}
+        </div>
+      </div>
     </div>
     <div class="chart-card">
       <h3>Atestados <span>últimos 6 meses</span></h3>
-      <canvas id="chart-atestados" height="200"></canvas>
+      <div style="overflow-x:auto">
+        ${svgBar(atesMeses.map(m=>({l:m.label,v:m.count})),'#2E75B6',340,150)}
+      </div>
     </div>
     <div class="chart-card">
       <h3>Colaboradores <span>por setor</span></h3>
-      <canvas id="chart-setores" height="200"></canvas>
+      ${svgHBar(setoresSort.map(([l,v])=>({l,v})),320,Math.max(setoresSort.length*30+10,100))}
     </div>
   </div>
 
-  <!-- LINHA 4: Listas de atenção -->
+  <!-- Listas linha 2 -->
   <div class="dash-grid-2">
     <div class="chart-card">
       <h3>⚠️ Férias Críticas <span>${proximosFerias.length} casos</span></h3>
       ${proximosFerias.length===0
-        ? '<div style="text-align:center;padding:20px;color:var(--texto2);font-size:13px">✅ Nenhum caso crítico</div>'
-        : `<div class="dash-list">
-          ${proximosFerias.slice(0,8).map(f=>`
-          <div class="dash-list-item">
-            <div class="avatar">${f.nome.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
-            <div class="name" style="margin-left:8px">${f.nome.split(' ').slice(0,2).join(' ')}</div>
-            <div class="right">
-              <span style="font-size:11px;color:var(--texto2)">${f.limite}</span>
-              <span class="badge ${f.st==='VENCIDO'?'badge-red':'badge-orange'}">${f.st==='VENCIDO'?'VENCIDO':f.dias+'d'}</span>
-            </div>
-          </div>`).join('')}
-        </div>`}
+        ?'<div style="text-align:center;padding:24px;color:var(--texto2);font-size:13px">✅ Nenhum caso crítico</div>'
+        :`<div class="dash-list">${proximosFerias.slice(0,8).map(f=>`
+        <div class="dash-list-item">
+          <div class="avatar">${f.nome.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
+          <div class="name" style="margin-left:8px">${f.nome.split(' ').slice(0,2).join(' ')}</div>
+          <div class="right">
+            <span style="font-size:11px;color:var(--texto2)">${f.limite}</span>
+            <span class="badge ${f.st==='VENCIDO'?'badge-red':'badge-orange'}">${f.st==='VENCIDO'?'VENCIDO':f.dias+'d'}</span>
+          </div>
+        </div>`).join('')}</div>`}
     </div>
     <div class="chart-card">
       <h3>🛡️ Afastamentos Ativos <span>${licAtivasList.length}</span></h3>
       ${licAtivasList.length===0
-        ? '<div style="text-align:center;padding:20px;color:var(--texto2);font-size:13px">✅ Nenhum afastamento ativo</div>'
-        : `<div class="dash-list">
-          ${licAtivasList.slice(0,8).map(l=>`
-          <div class="dash-list-item">
-            <div class="avatar">${l.nome.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
-            <div class="name" style="margin-left:8px">${l.nome.split(' ').slice(0,2).join(' ')}</div>
-            <div class="right">
-              <span class="badge badge-purple">${l.tipo.split(' ').slice(0,2).join(' ')}</span>
-              <span style="font-size:10px;color:var(--texto2)">${l.inicio||''}</span>
-            </div>
-          </div>`).join('')}
-        </div>`}
+        ?'<div style="text-align:center;padding:24px;color:var(--texto2);font-size:13px">✅ Nenhum afastamento ativo</div>'
+        :`<div class="dash-list">${licAtivasList.slice(0,8).map(l=>`
+        <div class="dash-list-item">
+          <div class="avatar">${l.nome.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
+          <div class="name" style="margin-left:8px">${l.nome.split(' ').slice(0,2).join(' ')}</div>
+          <div class="right">
+            <span class="badge badge-purple">${(l.tipo||'').split(' ').slice(0,2).join(' ')}</span>
+            <span style="font-size:10px;color:var(--texto2)">${l.inicio||''}</span>
+          </div>
+        </div>`).join('')}</div>`}
     </div>
   </div>
 
-  <!-- LINHA 5: Movimentações por tipo -->
+  <!-- Linha 3: movimentações + ASO -->
   <div class="dash-grid-2">
     <div class="chart-card">
       <h3>📋 Movimentações por Tipo</h3>
-      <canvas id="chart-movs" height="160"></canvas>
+      ${movEntries.length===0
+        ?'<div style="text-align:center;padding:24px;color:var(--texto2)">Nenhuma movimentação registrada</div>'
+        :`<div style="display:flex;flex-direction:column;gap:6px">
+          ${movEntries.map(([k,v],i)=>{
+            const pct=Math.round((v/movs.length)*100);
+            return`<div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+                <span>${MLABEL[k]||k}</span><strong>${v}</strong>
+              </div>
+              <div style="background:var(--borda);border-radius:3px;height:7px;overflow:hidden">
+                <div style="width:${pct}%;height:100%;background:${CORES_MOV[i%CORES_MOV.length]};border-radius:3px;transition:width .5s"></div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>`}
     </div>
     <div class="chart-card">
-      <h3>💉 ASO e Vacinas <span>situação</span></h3>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
-        <div style="text-align:center;padding:16px;background:var(--fundo);border-radius:var(--radius)">
-          <div style="font-size:28px;font-weight:700;color:var(--vermelho)">${asoVenc}</div>
+      <h3>💉 ASO e Vacinas</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="text-align:center;padding:14px;background:var(--fundo);border-radius:var(--radius);border:1px solid var(--borda)">
+          <div style="font-size:26px;font-weight:700;color:var(--vermelho)">${asoVenc}</div>
           <div style="font-size:11px;color:var(--texto2);margin-top:4px">ASO Vencidos</div>
         </div>
-        <div style="text-align:center;padding:16px;background:var(--fundo);border-radius:var(--radius)">
-          <div style="font-size:28px;font-weight:700;color:#BF8F00">${asoUrg}</div>
+        <div style="text-align:center;padding:14px;background:var(--fundo);border-radius:var(--radius);border:1px solid var(--borda)">
+          <div style="font-size:26px;font-weight:700;color:#BF8F00">${asoUrg}</div>
           <div style="font-size:11px;color:var(--texto2);margin-top:4px">ASO em 30 dias</div>
         </div>
-        <div style="text-align:center;padding:16px;background:var(--fundo);border-radius:var(--radius)">
-          <div style="font-size:28px;font-weight:700;color:var(--verde)">${asos.filter(a=>{const d=diasAteDate(a.prox);return d===null||d>30;}).length}</div>
+        <div style="text-align:center;padding:14px;background:var(--fundo);border-radius:var(--radius);border:1px solid var(--borda)">
+          <div style="font-size:26px;font-weight:700;color:var(--verde)">${asos.filter(a=>{const d=diasAteDate(a.prox);return d===null||d>30;}).length}</div>
           <div style="font-size:11px;color:var(--texto2);margin-top:4px">ASO em dia</div>
         </div>
-        <div style="text-align:center;padding:16px;background:var(--fundo);border-radius:var(--radius)">
-          <div style="font-size:28px;font-weight:700;color:var(--azul)">${vacinas.length}</div>
+        <div style="text-align:center;padding:14px;background:var(--fundo);border-radius:var(--radius);border:1px solid var(--borda)">
+          <div style="font-size:26px;font-weight:700;color:var(--azul)">${vacinas.length}</div>
           <div style="font-size:11px;color:var(--texto2);margin-top:4px">Vacinas registradas</div>
         </div>
       </div>
     </div>
   </div>`;
-
-  // ── RENDERIZAR GRÁFICOS ──────────────────────────────────────────────
-  // Destruir gráficos anteriores se existirem
-  ['chart-ferias','chart-atestados','chart-setores','chart-movs'].forEach(id=>{
-    const existing=Chart.getChart(id);
-    if(existing)existing.destroy();
-  });
-
-  // Donut - situação férias
-  new Chart(document.getElementById('chart-ferias'),{
-    type:'doughnut',
-    data:{
-      labels:['Vencidas','Urgentes','Programadas','Em Andamento','Sem Prog.'],
-      datasets:[{
-        data:[fVencidas,fUrgentes,fProgramadas,fAndamento,fSemProg],
-        backgroundColor:['#C00000','#FF9900','#375623','#7030A0','#BFBFBF'],
-        borderWidth:2,borderColor:'#fff'
-      }]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:true,
-      plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:12,padding:8}}}
-    }
-  });
-
-  // Barras - atestados por mês
-  new Chart(document.getElementById('chart-atestados'),{
-    type:'bar',
-    data:{
-      labels:atesMeses.map(m=>m.label),
-      datasets:[{
-        label:'Atestados',
-        data:atesMeses.map(m=>m.count),
-        backgroundColor:'rgba(46,117,182,0.7)',
-        borderColor:'#1F4E79',borderWidth:1,borderRadius:4
-      }]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:true,
-      plugins:{legend:{display:false}},
-      scales:{y:{beginAtZero:true,ticks:{stepSize:1,font:{size:10}},grid:{color:'rgba(0,0,0,.05)'}},
-        x:{ticks:{font:{size:9}},grid:{display:false}}}
-    }
-  });
-
-  // Barras horizontais - colaboradores por setor
-  new Chart(document.getElementById('chart-setores'),{
-    type:'bar',
-    data:{
-      labels:setoresSort.map(([s])=>s.length>14?s.slice(0,14)+'…':s),
-      datasets:[{
-        label:'Colaboradores',
-        data:setoresSort.map(([,n])=>n),
-        backgroundColor:'rgba(31,78,121,0.75)',
-        borderColor:'#1F4E79',borderWidth:1,borderRadius:4
-      }]
-    },
-    options:{
-      indexAxis:'y',responsive:true,maintainAspectRatio:true,
-      plugins:{legend:{display:false}},
-      scales:{x:{beginAtZero:true,ticks:{stepSize:1,font:{size:9}},grid:{color:'rgba(0,0,0,.05)'}},
-        y:{ticks:{font:{size:9}},grid:{display:false}}}
-    }
-  });
-
-  // Pizza - movimentações por tipo
-  const MLABEL={ferias:'Férias',transferencia:'Transferência',promocao:'Promoção',
-    mudanca_turno:'Turno',enquadramento:'Enquadramento',alteracao_funcao:'Alt. Função',
-    aumento_carga:'↑ Carga',reducao_carga:'↓ Carga',demissao:'Demissão',outros:'Outros'};
-  const movEntries=Object.entries(movMotivos).sort((a,b)=>b[1]-a[1]);
-  const CORES=['#1F4E79','#2E75B6','#70AD47','#FF9900','#C00000','#7030A0','#00B050','#BF8F00','#44546A','#BFBFBF'];
-  new Chart(document.getElementById('chart-movs'),{
-    type:'pie',
-    data:{
-      labels:movEntries.map(([k])=>MLABEL[k]||k),
-      datasets:[{
-        data:movEntries.map(([,v])=>v),
-        backgroundColor:CORES.slice(0,movEntries.length),
-        borderWidth:2,borderColor:'#fff'
-      }]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:true,
-      plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:12,padding:6}}}
-    }
-  });
 
   updateCounts();
 }
