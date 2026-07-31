@@ -3151,7 +3151,15 @@ window.salvarRegistro=async function(){
 
 // ─── ATESTADOS E FALTAS ───────────────────────────────────────────────────
 async function renderAtestados(){
-  document.getElementById('topbar-actions').innerHTML=`<button class="btn btn-primary" onclick="modalAddAtestado()"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Lançar</button>`;
+  document.getElementById('topbar-actions').innerHTML=`
+    <button class="btn" onclick="enviarAtestadosMes()">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,12 2,6"/></svg>
+      Enviar ao DP
+    </button>
+    <button class="btn btn-primary" onclick="modalAddAtestado()">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Lançar Atestado
+    </button>`;
   const content=document.getElementById('content');
   content.innerHTML=`<div style="text-align:center;padding:40px">Carregando...</div>`;
   const rows=await rhGet('atestados');
@@ -3714,6 +3722,88 @@ window.testarConexao = async function(){
   }
 };
 
+// ─── ENVIO DE ATESTADOS AO DP ────────────────────────────────────────
+const DP_EMAIL = 'afastamento@primaqualitasaude.org';
+const MESES_NOME = ['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
+
+window.enviarAtestadosMes = async function(){
+  // Carregar atestados do mês atual
+  const mes = HOJE.getMonth();
+  const ano = HOJE.getFullYear();
+  const mesNome = MESES_NOME[mes];
+
+  toast('Gerando planilha de atestados...');
+
+  const rows = await rhGet('atestados').catch(()=>[]);
+
+  // Filtrar do mês atual
+  const doMes = rows.filter(a=>{
+    if(!a.data)return false;
+    const p=a.data.split('/');
+    if(p.length<3)return false;
+    const d=new Date(+p[2],+p[1]-1,+p[0]);
+    return d.getMonth()===mes && d.getFullYear()===ano;
+  });
+
+  // Gerar CSV no formato da planilha para download
+  // Como não podemos gerar xlsx no browser sem lib, geramos CSV formatado
+  // e abrimos o email com instrução
+  
+  // Montar conteúdo CSV
+  const cabecalho = [
+    `CONTROLE DE ATESTADOS MÉDICOS - PROJETO HOSPITAL DE CORDEIRO`,
+    `MÊS DE REFERÊNCIA: ${mesNome}/${ano}`,
+    `Departamento / Setor,Nome Colaborador,Quantidade de dias,Data Inicial,Data Final,CID,Data de Envio para o DP`,
+  ];
+
+  const linhas = doMes.map(a=>{
+    const c=nomeColab(a.colaborador_id);
+    const colab=DB.find(x=>x.id===a.colaborador_id);
+    const setor=colab?colab.depto:'HOSPITAL DE CORDEIRO';
+    return [
+      'HOSPITAL DE CORDEIRO',
+      c.toUpperCase(),
+      a.dias||'',
+      a.data||'',
+      a.data_fim||a.data||'',
+      a.cid||'',
+      new Date().toLocaleDateString('pt-BR'),
+    ].join(',');
+  });
+
+  const csv = [...cabecalho, ...linhas].join('
+');
+  const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+
+  // Download automático
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `Controle_Atestados_HMC_${mesNome}_${ano}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+
+  // Aguardar um segundo e abrir email
+  setTimeout(()=>{
+    const assunto = encodeURIComponent(`Controle de Atestados - Hospital Municipal de Cordeiro - ${mesNome}/${ano}`);
+    const corpo = encodeURIComponent(
+`Prezados,
+
+Segue em anexo o controle de atestados do Hospital Municipal de Cordeiro referente ao mês de ${mesNome}/${ano}.
+
+Total de atestados no mês: ${doMes.length}
+
+Atenciosamente,
+Mírian Vicente Dias
+Diretora Administrativa
+Hospital Municipal de Cordeiro
+Contrato de Gestão nº 196/2025 – Prima Qualitá Saúde`
+    );
+    window.open(`mailto:${DP_EMAIL}?subject=${assunto}&body=${corpo}`,'_blank');
+    toast(`Planilha baixada! E-mail preparado para ${DP_EMAIL}`, 'success');
+  }, 800);
+};
+
 // ─── SEED MANUAL ─────────────────────────────────────────────────────
 window.forcarSeed = async function(){
   if(!confirm('Carregar os 94 colaboradores no banco? Isso pode levar alguns segundos.')) return;
@@ -3773,6 +3863,88 @@ window.testarConexao = async function(){
     toast('Erro de conexão: '+e.message, 'error');
     console.error(e);
   }
+};
+
+// ─── ENVIO DE ATESTADOS AO DP ────────────────────────────────────────
+const DP_EMAIL = 'afastamento@primaqualitasaude.org';
+const MESES_NOME = ['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
+
+window.enviarAtestadosMes = async function(){
+  // Carregar atestados do mês atual
+  const mes = HOJE.getMonth();
+  const ano = HOJE.getFullYear();
+  const mesNome = MESES_NOME[mes];
+
+  toast('Gerando planilha de atestados...');
+
+  const rows = await rhGet('atestados').catch(()=>[]);
+
+  // Filtrar do mês atual
+  const doMes = rows.filter(a=>{
+    if(!a.data)return false;
+    const p=a.data.split('/');
+    if(p.length<3)return false;
+    const d=new Date(+p[2],+p[1]-1,+p[0]);
+    return d.getMonth()===mes && d.getFullYear()===ano;
+  });
+
+  // Gerar CSV no formato da planilha para download
+  // Como não podemos gerar xlsx no browser sem lib, geramos CSV formatado
+  // e abrimos o email com instrução
+  
+  // Montar conteúdo CSV
+  const cabecalho = [
+    `CONTROLE DE ATESTADOS MÉDICOS - PROJETO HOSPITAL DE CORDEIRO`,
+    `MÊS DE REFERÊNCIA: ${mesNome}/${ano}`,
+    `Departamento / Setor,Nome Colaborador,Quantidade de dias,Data Inicial,Data Final,CID,Data de Envio para o DP`,
+  ];
+
+  const linhas = doMes.map(a=>{
+    const c=nomeColab(a.colaborador_id);
+    const colab=DB.find(x=>x.id===a.colaborador_id);
+    const setor=colab?colab.depto:'HOSPITAL DE CORDEIRO';
+    return [
+      'HOSPITAL DE CORDEIRO',
+      c.toUpperCase(),
+      a.dias||'',
+      a.data||'',
+      a.data_fim||a.data||'',
+      a.cid||'',
+      new Date().toLocaleDateString('pt-BR'),
+    ].join(',');
+  });
+
+  const csv = [...cabecalho, ...linhas].join('
+');
+  const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+
+  // Download automático
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `Controle_Atestados_HMC_${mesNome}_${ano}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+
+  // Aguardar um segundo e abrir email
+  setTimeout(()=>{
+    const assunto = encodeURIComponent(`Controle de Atestados - Hospital Municipal de Cordeiro - ${mesNome}/${ano}`);
+    const corpo = encodeURIComponent(
+`Prezados,
+
+Segue em anexo o controle de atestados do Hospital Municipal de Cordeiro referente ao mês de ${mesNome}/${ano}.
+
+Total de atestados no mês: ${doMes.length}
+
+Atenciosamente,
+Mírian Vicente Dias
+Diretora Administrativa
+Hospital Municipal de Cordeiro
+Contrato de Gestão nº 196/2025 – Prima Qualitá Saúde`
+    );
+    window.open(`mailto:${DP_EMAIL}?subject=${assunto}&body=${corpo}`,'_blank');
+    toast(`Planilha baixada! E-mail preparado para ${DP_EMAIL}`, 'success');
+  }, 800);
 };
 
 // ─── SEED MANUAL ─────────────────────────────────────────────────────
