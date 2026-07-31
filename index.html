@@ -200,6 +200,7 @@ tr:hover td{background:#FAFCFF}
   .content{padding:0}
 }
 </style>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -3727,12 +3728,10 @@ const DP_EMAIL = 'afastamento@primaqualitasaude.org';
 const MESES_NOME = ['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
 
 window.enviarAtestadosMes = async function(){
-  // Carregar atestados do mês atual
   const mes = HOJE.getMonth();
   const ano = HOJE.getFullYear();
   const mesNome = MESES_NOME[mes];
-
-  toast('Gerando planilha de atestados...');
+  toast('Gerando planilha Excel...');
 
   const rows = await rhGet('atestados').catch(()=>[]);
 
@@ -3745,45 +3744,50 @@ window.enviarAtestadosMes = async function(){
     return d.getMonth()===mes && d.getFullYear()===ano;
   });
 
-  // Gerar CSV no formato da planilha para download
-  // Como não podemos gerar xlsx no browser sem lib, geramos CSV formatado
-  // e abrimos o email com instrução
-  
-  // Montar conteúdo CSV
-  const cabecalho = [
-    `CONTROLE DE ATESTADOS MÉDICOS - PROJETO HOSPITAL DE CORDEIRO`,
-    `MÊS DE REFERÊNCIA: ${mesNome}/${ano}`,
-    `Departamento / Setor,Nome Colaborador,Quantidade de dias,Data Inicial,Data Final,CID,Data de Envio para o DP`,
+  // Montar dados para Excel
+  const wsData = [
+    [`CONTROLE DE ATESTADOS MÉDICOS - PROJETO HOSPITAL DE CORDEIRO`,'','','','','',''],
+    [`MÊS DE REFERÊNCIA: ${mesNome}/${ano}`,'','','','','',''],
+    ['Departamento / Setor','Nome Colaborador','Quantidade de dias do atestado',
+     'Data Inicial do Atestado','Data Final do Atestado','CID','Data de Envio para o DP'],
+    ...doMes.map(a=>{
+      const colab = DB.find(x=>x.id===a.colaborador_id);
+      return [
+        'HOSPITAL DE CORDEIRO',
+        nomeColab(a.colaborador_id).toUpperCase(),
+        a.dias||'',
+        a.data||'',
+        a.data||'',
+        a.cid||'',
+        new Date().toLocaleDateString('pt-BR'),
+      ];
+    }),
+    // Linhas em branco para novos lançamentos
+    ...Array(5).fill(['','','','','','','']),
   ];
 
-  const linhas = doMes.map(a=>{
-    const c=nomeColab(a.colaborador_id);
-    const colab=DB.find(x=>x.id===a.colaborador_id);
-    const setor=colab?colab.depto:'HOSPITAL DE CORDEIRO';
-    return [
-      'HOSPITAL DE CORDEIRO',
-      c.toUpperCase(),
-      a.dias||'',
-      a.data||'',
-      a.data_fim||a.data||'',
-      a.cid||'',
-      new Date().toLocaleDateString('pt-BR'),
-    ].join(',');
-  });
+  // Criar workbook Excel
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-  const csv = [...cabecalho, ...linhas].join('
-');
-  const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
+  // Larguras das colunas
+  ws['!cols'] = [
+    {wch:24},{wch:40},{wch:16},{wch:16},{wch:16},{wch:12},{wch:18}
+  ];
 
-  // Download automático
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `Controle_Atestados_HMC_${mesNome}_${ano}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
+  // Mesclar células do título e subtítulo
+  ws['!merges'] = [
+    {s:{r:0,c:0},e:{r:0,c:6}},
+    {s:{r:1,c:0},e:{r:1,c:6}},
+  ];
 
-  // Aguardar um segundo e abrir email
+  XLSX.utils.book_append_sheet(wb, ws, mesNome);
+
+  // Download
+  const nomeArq = `Controle_Atestados_HMC_${mesNome}_${ano}.xlsx`;
+  XLSX.writeFile(wb, nomeArq);
+
+  // Abrir email
   setTimeout(()=>{
     const assunto = encodeURIComponent(`Controle de Atestados - Hospital Municipal de Cordeiro - ${mesNome}/${ano}`);
     const corpo = encodeURIComponent(
@@ -3800,8 +3804,8 @@ Hospital Municipal de Cordeiro
 Contrato de Gestão nº 196/2025 – Prima Qualitá Saúde`
     );
     window.open(`mailto:${DP_EMAIL}?subject=${assunto}&body=${corpo}`,'_blank');
-    toast(`Planilha baixada! E-mail preparado para ${DP_EMAIL}`, 'success');
-  }, 800);
+    toast(`Excel gerado (${doMes.length} atestados) e e-mail preparado!`, 'success');
+  }, 1000);
 };
 
 // ─── SEED MANUAL ─────────────────────────────────────────────────────
@@ -3866,8 +3870,8 @@ window.testarConexao = async function(){
 };
 
 // ─── ENVIO DE ATESTADOS AO DP ────────────────────────────────────────
-const DP_EMAIL = 'afastamento@primaqualitasaude.org';
-const MESES_NOME = ['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
+// DP_EMAIL já declarado acima
+// MESES_NOME já declarado acima
 
 window.enviarAtestadosMes = async function(){
   // Carregar atestados do mês atual
@@ -3914,8 +3918,7 @@ window.enviarAtestadosMes = async function(){
     ].join(',');
   });
 
-  const csv = [...cabecalho, ...linhas].join('
-');
+  const csv = [...cabecalho, ...linhas].join('\n');
   const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
 
