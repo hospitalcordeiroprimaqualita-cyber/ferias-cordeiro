@@ -2645,7 +2645,7 @@ function renderMovimentacoes(){
       const res=await salvarMovimentacaoDB(mov);
       toast('Movimentação salva!','success');
       setTimeout(()=>gerarFormularioMov({...mov,_id:res[0]?.id},c),400);
-    }catch(e){toast('Erro ao salvar: '+e.message,'error');}
+    }catch(e){toast('Erro ao salvar: '+e.message,'error');console.error('mvSalvarEGerar:',e);}
   };
 }
 
@@ -3076,6 +3076,7 @@ window.modalAddVacina=function(){
 };
 
 window.salvarVacina=async function(){
+  try{
   const col=document.getElementById('vac-col').value;
   const nome=document.getElementById('vac-nome').value;
   if(!col||!nome){toast('Preencha colaborador e vacina.','error');return;}
@@ -3084,6 +3085,7 @@ window.salvarVacina=async function(){
     data:fmtBR(document.getElementById('vac-data').value),prox:fmtBR(document.getElementById('vac-prox').value),
     lote:document.getElementById('vac-lote').value});
   closeModal();toast('Vacina registrada!','success');renderVacinas();
+  }catch(e){toast('Erro ao salvar: '+e.message,'error');console.error('salvarVacina:',e);}
 };
 
 // ─── REGISTROS PROFISSIONAIS ──────────────────────────────────────────────
@@ -3134,6 +3136,7 @@ window.modalAddRegistro=function(){
 };
 
 window.salvarRegistro=async function(){
+  try{
   const col=document.getElementById('reg-col').value;
   const con=document.getElementById('reg-conselho').value;
   if(!col||!con){toast('Preencha colaborador e conselho.','error');return;}
@@ -3143,6 +3146,7 @@ window.salvarRegistro=async function(){
     validade:fmtBR(document.getElementById('reg-validade').value),
     situacao:document.getElementById('reg-sit').value});
   closeModal();toast('Registro cadastrado!','success');renderRegistros();
+  }catch(e){toast('Erro ao salvar: '+e.message,'error');console.error('salvarRegistro:',e);}
 };
 
 // ─── ATESTADOS E FALTAS ───────────────────────────────────────────────────
@@ -3189,6 +3193,7 @@ window.modalAddAtestado=function(){
 };
 
 window.salvarAtestado=async function(){
+  try{
   const col=document.getElementById('ate-col').value;
   const tipo=document.getElementById('ate-tipo').value;
   if(!col||!tipo){toast('Preencha colaborador e tipo.','error');return;}
@@ -3198,6 +3203,7 @@ window.salvarAtestado=async function(){
     dias:document.getElementById('ate-dias').value,
     cid:document.getElementById('ate-cid').value});
   closeModal();toast('Lançado com sucesso!','success');renderAtestados();
+  }catch(e){toast('Erro ao salvar: '+e.message,'error');console.error('salvarAtestado:',e);}
 };
 
 // ─── LICENÇAS E AFASTAMENTOS ──────────────────────────────────────────────
@@ -3246,6 +3252,7 @@ window.modalAddLicenca=function(){
 };
 
 window.salvarLicenca=async function(){
+  try{
   const col=document.getElementById('lic-col').value;
   const tipo=document.getElementById('lic-tipo').value;
   if(!col||!tipo){toast('Preencha colaborador e tipo.','error');return;}
@@ -3254,6 +3261,7 @@ window.salvarLicenca=async function(){
     inicio:fmtBR(document.getElementById('lic-ini').value),
     retorno:fmtBR(document.getElementById('lic-ret').value)});
   closeModal();toast('Licença registrada!','success');renderLicencas();
+  }catch(e){toast('Erro ao salvar: '+e.message,'error');console.error('salvarLicenca:',e);}
 };
 
 window.modalEncerrarLicenca=function(id){
@@ -3372,6 +3380,7 @@ window.modalAddEscala=function(){
 };
 
 window.salvarEscala=async function(){
+  try{
   const col=document.getElementById('esc-col').value;
   const turno=document.getElementById('esc-turno').value;
   if(!col||!turno){toast('Preencha colaborador e turno.','error');return;}
@@ -3380,6 +3389,7 @@ window.salvarEscala=async function(){
     data:fmtBR(document.getElementById('esc-data').value),
     setor:document.getElementById('esc-setor').value});
   closeModal();toast('Escala adicionada!','success');renderEscalas();
+  }catch(e){toast('Erro ao salvar: '+e.message,'error');console.error('salvarEscala:',e);}
 };
 
 // ─── BANCO DE HORAS ───────────────────────────────────────────────────────
@@ -3421,6 +3431,7 @@ window.modalAddBanco=function(){
 };
 
 window.salvarBanco=async function(){
+  try{
   const col=document.getElementById('bco-col').value;
   const tipo=document.getElementById('bco-tipo').value;
   const horas=document.getElementById('bco-horas').value;
@@ -3430,6 +3441,7 @@ window.salvarBanco=async function(){
     data:fmtBR(document.getElementById('bco-data').value),
     ref:document.getElementById('bco-ref').value});
   closeModal();toast('Lançado!','success');renderBancoHoras();
+  }catch(e){toast('Erro ao salvar: '+e.message,'error');console.error('salvarBanco:',e);}
 };
 
 // ─── TROCAS DE PLANTÃO ────────────────────────────────────────────────────
@@ -3471,6 +3483,7 @@ window.modalAddPlantao=function(){
 };
 
 window.salvarPlantao=async function(){
+  try{
   const col1=document.getElementById('pla-col1').value;
   const col2=document.getElementById('pla-col2').value;
   if(!col1||!col2){toast('Preencha os dois colaboradores.','error');return;}
@@ -3480,6 +3493,7 @@ window.salvarPlantao=async function(){
     data:fmtBR(document.getElementById('pla-data').value),
     setor:document.getElementById('pla-setor').value,status:'Pendente'});
   closeModal();toast('Troca registrada!','success');renderPlantoes();
+  }catch(e){toast('Erro ao salvar: '+e.message,'error');console.error('salvarPlantao:',e);}
 };
 
 // ─── ADMISSÃO / DEMISSÃO ──────────────────────────────────────────────────
@@ -3563,6 +3577,7 @@ window.modalAddAdm=function(){
 };
 
 window.salvarAdm=async function(){
+  try{
   const nome=document.getElementById('adm-nome').value.trim();
   const tipo=document.getElementById('adm-tipo').value;
   if(!nome){toast('Informe o nome do colaborador.','error');return;}
@@ -3573,6 +3588,7 @@ window.salvarAdm=async function(){
     data:fmtBR(document.getElementById('adm-data').value),
     status:'Em Andamento',docs:{}});
   closeModal();toast('Processo criado!','success');renderAdmDem();
+  }catch(e){toast('Erro ao salvar: '+e.message,'error');console.error('salvarAdm:',e);}
 };
 
 // ─── CENTRAL DE ALERTAS ───────────────────────────────────────────────────
