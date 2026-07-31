@@ -200,7 +200,6 @@ tr:hover td{background:#FAFCFF}
   .content{padding:0}
 }
 </style>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -1288,7 +1287,10 @@ function modalProgramar(cid, pi){
         <div class="field"><label>Data de término (calculada)</label><input type="date" class="fi readonly-field" id="prog-fim" value="${fimVal}" readonly></div>
       </div>
       <div class="form-grid cols-1" style="margin-top:10px">
-        <div class="field"><label>Dias a conceder</label><input type="number" class="fi" id="prog-dias" value="${p.saldo}" min="1" max="${p.saldo}" onchange="calcFim(this.value)"><div class="field-note">Máx. ${p.saldo} dias (pode fracionar em acordo com CLT Art. 134)</div></div>
+        <div class="field"><label>Dias a conceder</label>
+<input type="number" class="fi" id="prog-dias" value="${p.saldo}" min="1" max="${p.saldo}" 
+  oninput="calcFim(this.value);document.getElementById('saldo-rest').textContent='Saldo restante após este gozo: '+(${p.saldo}-parseInt(this.value||0))+' dias'">
+<div class="field-note" id="saldo-rest">Máx. ${p.saldo} dias · pode fracionar conforme CLT Art. 134 · altere o número para férias parciais</div></div>
       </div>
       <div class="section-title">Status do gozo</div>
       <div class="form-grid">
@@ -1310,12 +1312,15 @@ function modalProgramar(cid, pi){
   calcFim(p.saldo);
 }
 
-window.calcFim=function(saldo){
+window.calcFim=function(saldoParam){
   const ini=document.getElementById('prog-ini').value;
   const info=document.getElementById('prazo-info');
-  if(!ini){info.innerHTML='';return;}
+  if(!ini){if(info)info.innerHTML='';return;}
+  // Usar o valor digitado no campo dias, se existir
+  const campoD=document.getElementById('prog-dias');
+  const saldo = campoD ? (+campoD.value||+saldoParam) : +saldoParam;
   const d=new Date(ini+'T12:00:00');
-  const fim=new Date(d);fim.setDate(fim.getDate()+(+saldo-1));
+  const fim=new Date(d);fim.setDate(fim.getDate()+(saldo-1));
   document.getElementById('prog-fim').value=fim.toISOString().slice(0,10);
   const pedAte=addDays(parseDate(document.querySelector('#prog-fim').closest('.modal').querySelector('.modal-header p').textContent.split('Saldo')[0].trim()),0);
   info.innerHTML=`<div class="alert alert-info"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:16px;height:16px"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg><span>Período definido: <strong>${fmtDate(d)}</strong> a <strong>${fmtDate(fim)}</strong> (${saldo} dias corridos)</span></div>`;
@@ -1329,10 +1334,12 @@ window.salvarProgramacao=async function(cid,pi){
   const obs=document.getElementById('prog-obs').value;
   if(!ini||!fim){toast('Informe a data de início.','error');return;}
   const c=DB.find(x=>x.id===cid);
+  const diasConceder = Math.min(+dias, p.saldo);
   c.periodos[pi].programacao={
     inicio:new Date(ini+'T12:00:00').toLocaleDateString('pt-BR'),
     fim:new Date(fim+'T12:00:00').toLocaleDateString('pt-BR'),
-    dias:+dias
+    dias:diasConceder,
+    saldo_restante: p.saldo - diasConceder,
   };
   c.periodos[pi].status_calc=status;
   c.periodos[pi].obs_prog=obs;
@@ -1499,7 +1506,7 @@ function renderCriticos(){
       <td class="col-name">${c.nome}</td>
       <td style="font-size:12px;color:var(--texto2)">${c.funcao}</td>
       <td style="font-size:12px">${p.pa}</td>
-      <td style="text-align:center;font-weight:600">${p.saldo}d</td>
+      <td style="text-align:center;font-weight:600">${p.programacao && p.programacao.saldo_restante !== undefined && p.programacao.dias < p.saldo ? `<span title="Concedido: ${p.programacao.dias}d · Restante: ${p.programacao.saldo_restante}d" style="cursor:help">${p.programacao.dias}+${p.programacao.saldo_restante}d</span>` : p.saldo+'d'}</td>
       <td style="font-size:12px;font-weight:600;color:${dias<0?'var(--vermelho)':'#7F6000'}">${p.limite}</td>
       <td>${badgeHTML(st)}</td>
       <td style="font-size:12px;color:var(--texto2)">${acao}</td>
@@ -3731,11 +3738,10 @@ window.enviarAtestadosMes = async function(){
   const mes = HOJE.getMonth();
   const ano = HOJE.getFullYear();
   const mesNome = MESES_NOME[mes];
-  toast('Gerando planilha Excel...');
+  toast('Gerando planilha...');
 
   const rows = await rhGet('atestados').catch(()=>[]);
 
-  // Filtrar do mês atual
   const doMes = rows.filter(a=>{
     if(!a.data)return false;
     const p=a.data.split('/');
@@ -3744,68 +3750,85 @@ window.enviarAtestadosMes = async function(){
     return d.getMonth()===mes && d.getFullYear()===ano;
   });
 
-  // Montar dados para Excel
-  const wsData = [
-    [`CONTROLE DE ATESTADOS MÉDICOS - PROJETO HOSPITAL DE CORDEIRO`,'','','','','',''],
-    [`MÊS DE REFERÊNCIA: ${mesNome}/${ano}`,'','','','','',''],
-    ['Departamento / Setor','Nome Colaborador','Quantidade de dias do atestado',
-     'Data Inicial do Atestado','Data Final do Atestado','CID','Data de Envio para o DP'],
-    ...doMes.map(a=>{
-      const colab = DB.find(x=>x.id===a.colaborador_id);
-      return [
-        'HOSPITAL DE CORDEIRO',
-        nomeColab(a.colaborador_id).toUpperCase(),
-        a.dias||'',
-        a.data||'',
-        a.data||'',
-        a.cid||'',
-        new Date().toLocaleDateString('pt-BR'),
-      ];
-    }),
-    // Linhas em branco para novos lançamentos
-    ...Array(5).fill(['','','','','','','']),
-  ];
+  // Gerar XML Excel (SpreadsheetML) - abre no Excel como xls
+  function esc(v){ return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function cell(v,bold,bg){
+    const s = bold||bg ? ` ss:StyleID="${bold?'h':'d'}"` : '';
+    return `<Cell${s}><Data ss:Type="String">${esc(v)}</Data></Cell>`;
+  }
 
-  // Criar workbook Excel
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  const estilos = `<Styles>
+    <Style ss:ID="h"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#1F4E79" ss:Pattern="Solid"/><Alignment ss:WrapText="1" ss:Horizontal="Center" ss:Vertical="Center"/></Style>
+    <Style ss:ID="t"><Font ss:Bold="1" ss:Size="12" ss:Color="#FFFFFF"/><Interior ss:Color="#1F4E79" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>
+    <Style ss:ID="s"><Font ss:Bold="1" ss:Color="#1F4E79"/><Interior ss:Color="#BDD7EE" ss:Pattern="Solid"/><Alignment ss:Horizontal="Left" ss:Vertical="Center"/></Style>
+    <Style ss:ID="d"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
+    <Style ss:ID="o"><Interior ss:Color="#F2F2F2" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
+    <Style ss:ID="g"><Interior ss:Color="#E2EFDA" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
+  </Styles>`;
 
-  // Larguras das colunas
-  ws['!cols'] = [
-    {wch:24},{wch:40},{wch:16},{wch:16},{wch:16},{wch:12},{wch:18}
-  ];
+  const colWidths = [22,40,14,14,14,12,18].map(w=>`<Column ss:Width="${w*6}"/>`).join('');
 
-  // Mesclar células do título e subtítulo
-  ws['!merges'] = [
-    {s:{r:0,c:0},e:{r:0,c:6}},
-    {s:{r:1,c:0},e:{r:1,c:6}},
-  ];
+  // Linha de título
+  const linTitulo = `<Row ss:Height="22"><Cell ss:MergeAcross="6" ss:StyleID="t"><Data ss:Type="String">CONTROLE DE ATESTADOS MÉDICOS - PROJETO HOSPITAL DE CORDEIRO</Data></Cell></Row>`;
+  const linMes = `<Row ss:Height="18"><Cell ss:MergeAcross="6" ss:StyleID="s"><Data ss:Type="String">MÊS DE REFERÊNCIA: ${mesNome}/${ano}</Data></Cell></Row>`;
+  const hdrs = ['Departamento / Setor','Nome Colaborador','Qtd. Dias','Data Inicial','Data Final','CID','Envio ao DP'];
+  const linHeader = `<Row ss:Height="30">${hdrs.map(h=>`<Cell ss:StyleID="h"><Data ss:Type="String">${esc(h)}</Data></Cell>`).join('')}</Row>`;
 
-  XLSX.utils.book_append_sheet(wb, ws, mesNome);
+  const linDados = doMes.map((a,i)=>{
+    const colab = DB.find(x=>x.id===a.colaborador_id);
+    const setor = colab ? colab.depto : 'HOSPITAL DE CORDEIRO';
+    const st = i%2===0?'d':'o';
+    const vals = [
+      'HOSPITAL DE CORDEIRO',
+      nomeColab(a.colaborador_id).toUpperCase(),
+      a.dias||'',
+      a.data||'',
+      a.data||'',
+      a.cid||'',
+      new Date().toLocaleDateString('pt-BR'),
+    ];
+    return `<Row ss:Height="16">${vals.map(v=>`<Cell ss:StyleID="${st}"><Data ss:Type="String">${esc(v)}</Data></Cell>`).join('')}</Row>`;
+  }).join('');
 
-  // Download
-  const nomeArq = `Controle_Atestados_HMC_${mesNome}_${ano}.xlsx`;
-  XLSX.writeFile(wb, nomeArq);
+  // Linhas em branco
+  const linBranco = Array(8).fill(`<Row ss:Height="16">${Array(7).fill('<Cell ss:StyleID="d"><Data ss:Type="String"></Data></Cell>').join('')}</Row>`).join('');
 
-  // Abrir email
+  const orientacoes = [
+    '* ENVIAR A PLANILHA DIARIAMENTE',
+    '* NA PLANILHA DEVE CONTER TODOS OS ATESTADOS DO MÊS',
+    '* AO LANÇAR NOVOS ATESTADOS, NÃO APAGAR OS ATESTADOS ANTERIORES',
+    '* DESTACAR OS ATESTADOS ENVIADOS NO DIA COM A COR VERDE',
+  ].map(o=>`<Row><Cell ss:MergeAcross="6"><Data ss:Type="String">${esc(o)}</Data></Cell></Row>`).join('');
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+  xmlns:x="urn:schemas-microsoft-com:office:excel">
+  ${estilos}
+  <Worksheet ss:Name="${mesNome}">
+    <Table>${colWidths}${linTitulo}${linMes}${linHeader}${linDados}${linBranco}${orientacoes}</Table>
+    <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+      <FreezePanes/><FrozenNoSplit/><SplitHorizontal>3</SplitHorizontal><TopRowBottomPane>3</TopRowBottomPane>
+    </WorksheetOptions>
+  </Worksheet>
+</Workbook>`;
+
+  // Download como .xls (XML Excel)
+  const blob = new Blob([xml], {type:'application/vnd.ms-excel;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `Controle_Atestados_HMC_${mesNome}_${ano}.xls`;
+  link.click();
+  URL.revokeObjectURL(url);
+
   setTimeout(()=>{
     const assunto = encodeURIComponent(`Controle de Atestados - Hospital Municipal de Cordeiro - ${mesNome}/${ano}`);
-    const corpo = encodeURIComponent(
-`Prezados,
-
-Segue em anexo o controle de atestados do Hospital Municipal de Cordeiro referente ao mês de ${mesNome}/${ano}.
-
-Total de atestados no mês: ${doMes.length}
-
-Atenciosamente,
-Mírian Vicente Dias
-Diretora Administrativa
-Hospital Municipal de Cordeiro
-Contrato de Gestão nº 196/2025 – Prima Qualitá Saúde`
-    );
+    const corpo = encodeURIComponent(`Prezados,\n\nSegue em anexo o controle de atestados do Hospital Municipal de Cordeiro referente ao mês de ${mesNome}/${ano}.\n\nTotal de atestados no mês: ${doMes.length}\n\nAtenciosamente,\nMírian Vicente Dias\nDiretora Administrativa\nHospital Municipal de Cordeiro\nContrato de Gestão nº 196/2025 – Prima Qualitá Saúde`);
     window.open(`mailto:${DP_EMAIL}?subject=${assunto}&body=${corpo}`,'_blank');
-    toast(`Excel gerado (${doMes.length} atestados) e e-mail preparado!`, 'success');
-  }, 1000);
+    toast(`Planilha gerada (${doMes.length} atestados) e e-mail preparado!`, 'success');
+  }, 800);
 };
 
 // ─── SEED MANUAL ─────────────────────────────────────────────────────
