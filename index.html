@@ -879,9 +879,9 @@ function goPage(page, el){
   currentPage = page;
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   if(el) el.classList.add('active');
-  const titles = {painel:'Sistema de RH – Hospital Cordeiro',criticos:'Casos Críticos',programacao:'Programação 2026',colaboradores:'Colaboradores',formulario:'Formulário de Movimentação de Pessoal',prev2027:'Previsão 2027',movimentacoes:'Nova Movimentação',historico:'Histórico de Movimentações',alertas:'Central de Alertas',licencas:'Licenças e Afastamentos',atestados:'Atestados e Faltas',asos:'ASO – Exames Ocupacionais',vacinas:'Vacinas',registros:'Registros Profissionais',escalas:'Escalas de Plantão',banco_horas:'Banco de Horas',plantoes:'Trocas de Plantão',adm_dem:'Admissão / Demissão'};
+  const titles = {painel:'Sistema de RH – Hospital Cordeiro',criticos:'Casos Críticos',programacao:'Programação 2026',colaboradores:'Colaboradores',formulario:'Formulário de Movimentação de Pessoal',prev2027:'Previsão 2027',movimentacoes:'Nova Movimentação',historico:'Histórico de Movimentações',alertas:'Central de Alertas',licencas:'Licenças e Afastamentos',atestados:'Atestados e Faltas',asos:'ASO – Exames Ocupacionais',vacinas:'Vacinas',registros:'Registros Profissionais',escalas:'Escalas de Plantão',banco_horas:'Banco de Horas',plantoes:'Trocas de Plantão',adm_dem:'Admissão / Demissão',relatorios:'Relatórios'};
   document.getElementById('page-title').textContent = titles[page]||page;
-  const pages = {painel:renderPainel,criticos:renderCriticos,programacao:renderProgramacao,colaboradores:renderColaboradores,formulario:renderFormulario,prev2027:renderPrev2027,movimentacoes:renderMovimentacoes,historico:renderHistorico,alertas:renderAlertas,licencas:renderLicencas,atestados:renderAtestados,asos:renderAsos,vacinas:renderVacinas,registros:renderRegistros,escalas:renderEscalas,banco_horas:renderBancoHoras,plantoes:renderPlantoes,adm_dem:renderAdmDem};
+  const pages = {painel:renderPainel,criticos:renderCriticos,programacao:renderProgramacao,colaboradores:renderColaboradores,formulario:renderFormulario,prev2027:renderPrev2027,movimentacoes:renderMovimentacoes,historico:renderHistorico,alertas:renderAlertas,licencas:renderLicencas,atestados:renderAtestados,asos:renderAsos,vacinas:renderVacinas,registros:renderRegistros,escalas:renderEscalas,banco_horas:renderBancoHoras,plantoes:renderPlantoes,adm_dem:renderAdmDem,relatorios:renderRelatorios};
   if(pages[page]) pages[page]();
 }
 
@@ -3831,6 +3831,281 @@ window.enviarAtestadosMes = async function(){
   }, 800);
 };
 
+// ─── RELATÓRIOS ──────────────────────────────────────────────────────
+async function renderRelatorios(){
+  document.getElementById('topbar-actions').innerHTML='';
+  const content = document.getElementById('content');
+
+  const mes = HOJE.getMonth();
+  const ano = HOJE.getFullYear();
+  const mesNome = MESES_NOME[mes];
+  const mesAnt = mes===0?11:mes-1;
+  const anoAnt = mes===0?ano-1:ano;
+  const mesAntNome = MESES_NOME[mesAnt];
+
+  content.innerHTML=`
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+
+    <!-- ATESTADOS -->
+    <div class="chart-card">
+      <h3>📋 Controle de Atestados</h3>
+      <p style="font-size:12px;color:var(--texto2);margin-bottom:16px">Planilha mensal no modelo Prima Qualitá com todos os atestados registrados no sistema.</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="enviarAtestadosMes()">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Baixar – ${mesNome}/${ano}
+        </button>
+        <button class="btn" style="width:100%;justify-content:center" onclick="gerarAtestadosMesRef(${mesAnt},${anoAnt})">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Baixar – ${mesAntNome}/${anoAnt}
+        </button>
+        <div style="margin-top:4px">
+          <label style="font-size:12px;font-weight:600;color:var(--texto2)">Outro mês:</label>
+          <div style="display:flex;gap:6px;margin-top:4px">
+            <select class="fi" id="rel-ate-mes" style="flex:1">
+              ${MESES_NOME.map((m,i)=>`<option value="${i}" ${i===mes?'selected':''}>${m}</option>`).join('')}
+            </select>
+            <input type="number" class="fi" id="rel-ate-ano" value="${ano}" min="2024" max="2030" style="width:80px">
+            <button class="btn" onclick="gerarAtestadosMesRef(+document.getElementById('rel-ate-mes').value,+document.getElementById('rel-ate-ano').value)">↓</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FÉRIAS -->
+    <div class="chart-card">
+      <h3>🏖️ Relatório de Férias</h3>
+      <p style="font-size:12px;color:var(--texto2);margin-bottom:16px">Planilha completa de programação de férias por colaborador com status e datas.</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="gerarRelFerias('todos')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Todos os colaboradores
+        </button>
+        <button class="btn" style="width:100%;justify-content:center" onclick="gerarRelFerias('criticos')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+          Apenas casos críticos
+        </button>
+        <button class="btn" style="width:100%;justify-content:center" onclick="gerarRelFerias('programados')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+          Apenas programados
+        </button>
+      </div>
+    </div>
+
+    <!-- COLABORADORES -->
+    <div class="chart-card">
+      <h3>👥 Relatório de Colaboradores</h3>
+      <p style="font-size:12px;color:var(--texto2);margin-bottom:16px">Lista completa de colaboradores ativos com função, setor e data de admissão.</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="gerarRelColaboradores('ativos')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Colaboradores ativos
+        </button>
+        <button class="btn" style="width:100%;justify-content:center" onclick="gerarRelColaboradores('todos')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Todos (incl. desligados)
+        </button>
+        <button class="btn" style="width:100%;justify-content:center" onclick="gerarRelColaboradores('setor')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          Por setor
+        </button>
+      </div>
+    </div>
+
+    <!-- ASO E VACINAS -->
+    <div class="chart-card">
+      <h3>💉 ASO e Vacinas</h3>
+      <p style="font-size:12px;color:var(--texto2);margin-bottom:16px">Relatório de exames ocupacionais e vacinas com status de vencimento.</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="gerarRelAso()">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Relatório de ASO
+        </button>
+        <button class="btn" style="width:100%;justify-content:center" onclick="gerarRelVacinas()">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Relatório de Vacinas
+        </button>
+      </div>
+    </div>
+
+    <!-- LICENÇAS E ATESTADOS -->
+    <div class="chart-card">
+      <h3>🛡️ Licenças e Afastamentos</h3>
+      <p style="font-size:12px;color:var(--texto2);margin-bottom:16px">Relatório de licenças ativas e históricas por colaborador.</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="gerarRelLicencas('ativas')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Licenças ativas
+        </button>
+        <button class="btn" style="width:100%;justify-content:center" onclick="gerarRelLicencas('todas')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Histórico completo
+        </button>
+      </div>
+    </div>
+
+    <!-- MOVIMENTAÇÕES -->
+    <div class="chart-card">
+      <h3>📄 Movimentações de Pessoal</h3>
+      <p style="font-size:12px;color:var(--texto2);margin-bottom:16px">Histórico de todas as movimentações registradas no sistema.</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="gerarRelMovimentacoes()">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Todas as movimentações
+        </button>
+        <button class="btn" style="width:100%;justify-content:center" onclick="gerarRelMovimentacoes('ferias')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Apenas férias
+        </button>
+      </div>
+    </div>
+
+  </div>`;
+}
+
+// ─── FUNÇÕES DE GERAÇÃO DE RELATÓRIOS ────────────────────────────────
+function xlsEsc(v){ return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function gerarXLS(nomeArq, sheetNome, cabecalho, dados, cores){
+  const AZUL='#1F4E79', AZUL_C='#BDD7EE', CINZA='#F2F2F2';
+  const estilos=`<Styles>
+    <Style ss:ID="h"><Font ss:Bold="1" ss:Color="#FFFFFF" ss:Size="10"/><Interior ss:Color="${AZUL}" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
+    <Style ss:ID="t"><Font ss:Bold="1" ss:Color="#FFFFFF" ss:Size="12"/><Interior ss:Color="${AZUL}" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>
+    <Style ss:ID="d"><Font ss:Size="9"/><Alignment ss:Horizontal="Left" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
+    <Style ss:ID="o"><Font ss:Size="9"/><Interior ss:Color="${CINZA}" ss:Pattern="Solid"/><Alignment ss:Horizontal="Left" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
+    <Style ss:ID="r"><Font ss:Bold="1" ss:Color="#C00000" ss:Size="9"/><Alignment ss:Horizontal="Left" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
+    <Style ss:ID="g"><Font ss:Bold="1" ss:Color="#375623" ss:Size="9"/><Alignment ss:Horizontal="Left" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
+  </Styles>`;
+
+  const mergeAcross = cabecalho.length - 1;
+  const titulo = `<Row ss:Height="22"><Cell ss:MergeAcross="${mergeAcross}" ss:StyleID="t"><Data ss:Type="String">HOSPITAL MUNICIPAL DE CORDEIRO – ${sheetNome.toUpperCase()}</Data></Cell></Row>`;
+  const subTitulo = `<Row ss:Height="16"><Cell ss:MergeAcross="${mergeAcross}" ss:StyleID="t"><Data ss:Type="String">Emitido em: ${HOJE.toLocaleDateString('pt-BR')} | Prima Qualitá – CG nº 196/2025</Data></Cell></Row>`;
+  const hdr = `<Row ss:Height="28">${cabecalho.map(h=>`<Cell ss:StyleID="h"><Data ss:Type="String">${xlsEsc(h)}</Data></Cell>`).join('')}</Row>`;
+
+  const linhas = dados.map((row,i)=>{
+    const st = cores ? cores[i] : (i%2===0?'d':'o');
+    return `<Row ss:Height="16">${row.map(v=>`<Cell ss:StyleID="${st}"><Data ss:Type="String">${xlsEsc(v)}</Data></Cell>`).join('')}</Row>`;
+  }).join('');
+
+  const colW = cabecalho.map((_,i)=>`<Column ss:Width="${[200,280,120,100,100,80,120][i]||100}"/>`).join('');
+
+  const xml=`<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+  ${estilos}
+  <Worksheet ss:Name="${xlsEsc(sheetNome)}">
+    <Table>${colW}${titulo}${subTitulo}${hdr}${linhas}</Table>
+  </Worksheet>
+</Workbook>`;
+
+  const blob=new Blob([xml],{type:'application/vnd.ms-excel;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=nomeArq+'.xls';a.click();
+  URL.revokeObjectURL(url);
+  toast(`${nomeArq}.xls baixado com sucesso!`,'success');
+}
+
+// Atestados por mês de referência
+window.gerarAtestadosMesRef=async function(mes,ano){
+  const rows=await rhGet('atestados').catch(()=>[]);
+  const doMes=rows.filter(a=>{
+    if(!a.data)return false;
+    const p=a.data.split('/');
+    if(p.length<3)return false;
+    const d=new Date(+p[2],+p[1]-1,+p[0]);
+    return d.getMonth()===mes&&d.getFullYear()===ano;
+  });
+  const mesNome=MESES_NOME[mes];
+  const cab=['Departamento / Setor','Nome Colaborador','Qtd. Dias','Data Inicial','Data Final','CID','Envio ao DP'];
+  const dados=doMes.map(a=>[
+    'HOSPITAL DE CORDEIRO',
+    nomeColab(a.colaborador_id).toUpperCase(),
+    a.dias||'',a.data||'',a.data||'',a.cid||'',
+    new Date().toLocaleDateString('pt-BR')
+  ]);
+  gerarXLS(`Controle_Atestados_HMC_${mesNome}_${ano}`,`Atestados ${mesNome}/${ano}`,cab,dados);
+};
+
+// Férias
+window.gerarRelFerias=function(filtro){
+  const ativos=DB.filter(c=>c.ativo);
+  const cab=['Contrato','Nome','Função','Setor','Período Aquisitivo','Saldo','Início Gozo','Término Gozo','Data Limite','Status'];
+  const dados=[];const cores=[];
+  ativos.forEach(c=>{
+    c.periodos.forEach(p=>{
+      const st=p.programacao?(p.status_calc||'PROGRAMADO'):calcStatus(p);
+      if(filtro==='criticos'&&!['VENCIDO','URGENTE'].includes(st))return;
+      if(filtro==='programados'&&!['PROGRAMADO','EM ANDAMENTO','CONCLUÍDO'].includes(st))return;
+      dados.push([c.id,c.nome,c.funcao,c.depto,p.pa,p.saldo+'d',
+        p.programacao?.inicio||'',p.programacao?.fim||'',p.limite,st]);
+      cores.push(st==='VENCIDO'?'r':st==='PROGRAMADO'||st==='CONCLUÍDO'?'g':dados.length%2===0?'d':'o');
+    });
+  });
+  gerarXLS(`Relatorio_Ferias_HMC_${HOJE.toLocaleDateString('pt-BR').replace(/\//g,'-')}`,
+    filtro==='criticos'?'Férias Críticas':filtro==='programados'?'Férias Programadas':'Programação de Férias',
+    cab,dados,cores);
+};
+
+// Colaboradores
+window.gerarRelColaboradores=function(filtro){
+  let lista=filtro==='ativos'?DB.filter(c=>c.ativo):DB;
+  if(filtro==='setor') lista=[...lista].sort((a,b)=>a.depto.localeCompare(b.depto));
+  const cab=['Contrato','Nome','Função','Setor','Admissão','CPF','Situação'];
+  const dados=lista.map(c=>[c.id,c.nome,c.funcao,c.depto,c.admissao,c.cpf||'',c.ativo?'Ativo':'Desligado']);
+  const cores=lista.map((_,i)=>i%2===0?'d':'o');
+  gerarXLS(`Colaboradores_HMC_${HOJE.toLocaleDateString('pt-BR').replace(/\//g,'-')}`,
+    'Colaboradores',cab,dados,cores);
+};
+
+// ASO
+window.gerarRelAso=async function(){
+  const rows=await rhGet('asos').catch(()=>[]);
+  const cab=['Colaborador','Tipo','Data Realização','Próximo ASO','Resultado','Status'];
+  const dados=rows.map(r=>{
+    const d=diasAteDate(r.prox);
+    const st=d===null?'—':d<0?'VENCIDO':d<=30?'VENCE EM '+d+'d':'EM DIA';
+    return[nomeColab(r.colaborador_id),r.tipo||'',r.data||'',r.prox||'',r.resultado||'',st];
+  });
+  const cores=rows.map(r=>{const d=diasAteDate(r.prox);return d!==null&&d<0?'r':d!==null&&d<=30?'o':'d';});
+  gerarXLS(`ASO_HMC_${HOJE.toLocaleDateString('pt-BR').replace(/\//g,'-')}`,'ASO – Exames Ocupacionais',cab,dados,cores);
+};
+
+// Vacinas
+window.gerarRelVacinas=async function(){
+  const rows=await rhGet('vacinas').catch(()=>[]);
+  const cab=['Colaborador','Vacina','Dose','Data Aplicação','Próxima Dose','Lote'];
+  const dados=rows.map(r=>[nomeColab(r.colaborador_id),r.vacina||'',r.dose||'',r.data||'',r.prox||'',r.lote||'']);
+  gerarXLS(`Vacinas_HMC_${HOJE.toLocaleDateString('pt-BR').replace(/\//g,'-')}`,'Vacinas',cab,dados);
+};
+
+// Licenças
+window.gerarRelLicencas=async function(filtro){
+  const rows=await rhGet('licencas').catch(()=>[]);
+  const lista=filtro==='ativas'?rows.filter(l=>!l.fim):rows;
+  const cab=['Colaborador','Tipo','Início','Término','Retorno','Situação'];
+  const dados=lista.map(l=>[nomeColab(l.colaborador_id),l.tipo||'',l.inicio||'',l.fim||'Em andamento',l.retorno||'',l.fim?'Encerrada':'Ativa']);
+  const cores=lista.map(l=>!l.fim?'r':'d');
+  gerarXLS(`Licencas_HMC_${HOJE.toLocaleDateString('pt-BR').replace(/\//g,'-')}`,
+    filtro==='ativas'?'Licenças Ativas':'Licenças e Afastamentos',cab,dados,cores);
+};
+
+// Movimentações
+window.gerarRelMovimentacoes=async function(filtroMot){
+  const rows=await rhGet('movimentacoes').catch(()=>[]);
+  const MLABEL={ferias:'Férias',transferencia:'Transferência',promocao:'Promoção',
+    mudanca_turno:'Mudança de Turno',enquadramento:'Enquadramento',alteracao_funcao:'Alt. Função',
+    aumento_carga:'Aumento de Carga',reducao_carga:'Redução de Carga',demissao:'Demissão',outros:'Outros'};
+  const lista=filtroMot?rows.filter(r=>r.motivo===filtroMot):rows;
+  const cab=['Data','Colaborador','Motivo','Período/Detalhe','Observações'];
+  const dados=lista.map(r=>[
+    r.data_alteracao||'',nomeColab(r.colaborador_id),MLABEL[r.motivo]||r.motivo,
+    r.ferias_periodo_concessivo||r.area_destino||r.cargo_proposto||r.desl_tipo||'',
+    r.observacoes||''
+  ]);
+  gerarXLS(`Movimentacoes_HMC_${HOJE.toLocaleDateString('pt-BR').replace(/\//g,'-')}`,
+    filtroMot?`Movimentações – ${MLABEL[filtroMot]||filtroMot}`:'Movimentações de Pessoal',cab,dados);
+};
+
 // ─── SEED MANUAL ─────────────────────────────────────────────────────
 window.forcarSeed = async function(){
   if(!confirm('Carregar os 94 colaboradores no banco? Isso pode levar alguns segundos.')) return;
@@ -3971,6 +4246,281 @@ Contrato de Gestão nº 196/2025 – Prima Qualitá Saúde`
     window.open(`mailto:${DP_EMAIL}?subject=${assunto}&body=${corpo}`,'_blank');
     toast(`Planilha baixada! E-mail preparado para ${DP_EMAIL}`, 'success');
   }, 800);
+};
+
+// ─── RELATÓRIOS ──────────────────────────────────────────────────────
+async function renderRelatorios(){
+  document.getElementById('topbar-actions').innerHTML='';
+  const content = document.getElementById('content');
+
+  const mes = HOJE.getMonth();
+  const ano = HOJE.getFullYear();
+  const mesNome = MESES_NOME[mes];
+  const mesAnt = mes===0?11:mes-1;
+  const anoAnt = mes===0?ano-1:ano;
+  const mesAntNome = MESES_NOME[mesAnt];
+
+  content.innerHTML=`
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+
+    <!-- ATESTADOS -->
+    <div class="chart-card">
+      <h3>📋 Controle de Atestados</h3>
+      <p style="font-size:12px;color:var(--texto2);margin-bottom:16px">Planilha mensal no modelo Prima Qualitá com todos os atestados registrados no sistema.</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="enviarAtestadosMes()">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Baixar – ${mesNome}/${ano}
+        </button>
+        <button class="btn" style="width:100%;justify-content:center" onclick="gerarAtestadosMesRef(${mesAnt},${anoAnt})">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Baixar – ${mesAntNome}/${anoAnt}
+        </button>
+        <div style="margin-top:4px">
+          <label style="font-size:12px;font-weight:600;color:var(--texto2)">Outro mês:</label>
+          <div style="display:flex;gap:6px;margin-top:4px">
+            <select class="fi" id="rel-ate-mes" style="flex:1">
+              ${MESES_NOME.map((m,i)=>`<option value="${i}" ${i===mes?'selected':''}>${m}</option>`).join('')}
+            </select>
+            <input type="number" class="fi" id="rel-ate-ano" value="${ano}" min="2024" max="2030" style="width:80px">
+            <button class="btn" onclick="gerarAtestadosMesRef(+document.getElementById('rel-ate-mes').value,+document.getElementById('rel-ate-ano').value)">↓</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FÉRIAS -->
+    <div class="chart-card">
+      <h3>🏖️ Relatório de Férias</h3>
+      <p style="font-size:12px;color:var(--texto2);margin-bottom:16px">Planilha completa de programação de férias por colaborador com status e datas.</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="gerarRelFerias('todos')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Todos os colaboradores
+        </button>
+        <button class="btn" style="width:100%;justify-content:center" onclick="gerarRelFerias('criticos')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+          Apenas casos críticos
+        </button>
+        <button class="btn" style="width:100%;justify-content:center" onclick="gerarRelFerias('programados')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+          Apenas programados
+        </button>
+      </div>
+    </div>
+
+    <!-- COLABORADORES -->
+    <div class="chart-card">
+      <h3>👥 Relatório de Colaboradores</h3>
+      <p style="font-size:12px;color:var(--texto2);margin-bottom:16px">Lista completa de colaboradores ativos com função, setor e data de admissão.</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="gerarRelColaboradores('ativos')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Colaboradores ativos
+        </button>
+        <button class="btn" style="width:100%;justify-content:center" onclick="gerarRelColaboradores('todos')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Todos (incl. desligados)
+        </button>
+        <button class="btn" style="width:100%;justify-content:center" onclick="gerarRelColaboradores('setor')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          Por setor
+        </button>
+      </div>
+    </div>
+
+    <!-- ASO E VACINAS -->
+    <div class="chart-card">
+      <h3>💉 ASO e Vacinas</h3>
+      <p style="font-size:12px;color:var(--texto2);margin-bottom:16px">Relatório de exames ocupacionais e vacinas com status de vencimento.</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="gerarRelAso()">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Relatório de ASO
+        </button>
+        <button class="btn" style="width:100%;justify-content:center" onclick="gerarRelVacinas()">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Relatório de Vacinas
+        </button>
+      </div>
+    </div>
+
+    <!-- LICENÇAS E ATESTADOS -->
+    <div class="chart-card">
+      <h3>🛡️ Licenças e Afastamentos</h3>
+      <p style="font-size:12px;color:var(--texto2);margin-bottom:16px">Relatório de licenças ativas e históricas por colaborador.</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="gerarRelLicencas('ativas')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Licenças ativas
+        </button>
+        <button class="btn" style="width:100%;justify-content:center" onclick="gerarRelLicencas('todas')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Histórico completo
+        </button>
+      </div>
+    </div>
+
+    <!-- MOVIMENTAÇÕES -->
+    <div class="chart-card">
+      <h3>📄 Movimentações de Pessoal</h3>
+      <p style="font-size:12px;color:var(--texto2);margin-bottom:16px">Histórico de todas as movimentações registradas no sistema.</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="gerarRelMovimentacoes()">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Todas as movimentações
+        </button>
+        <button class="btn" style="width:100%;justify-content:center" onclick="gerarRelMovimentacoes('ferias')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Apenas férias
+        </button>
+      </div>
+    </div>
+
+  </div>`;
+}
+
+// ─── FUNÇÕES DE GERAÇÃO DE RELATÓRIOS ────────────────────────────────
+function xlsEsc(v){ return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function gerarXLS(nomeArq, sheetNome, cabecalho, dados, cores){
+  const AZUL='#1F4E79', AZUL_C='#BDD7EE', CINZA='#F2F2F2';
+  const estilos=`<Styles>
+    <Style ss:ID="h"><Font ss:Bold="1" ss:Color="#FFFFFF" ss:Size="10"/><Interior ss:Color="${AZUL}" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
+    <Style ss:ID="t"><Font ss:Bold="1" ss:Color="#FFFFFF" ss:Size="12"/><Interior ss:Color="${AZUL}" ss:Pattern="Solid"/><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>
+    <Style ss:ID="d"><Font ss:Size="9"/><Alignment ss:Horizontal="Left" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
+    <Style ss:ID="o"><Font ss:Size="9"/><Interior ss:Color="${CINZA}" ss:Pattern="Solid"/><Alignment ss:Horizontal="Left" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
+    <Style ss:ID="r"><Font ss:Bold="1" ss:Color="#C00000" ss:Size="9"/><Alignment ss:Horizontal="Left" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
+    <Style ss:ID="g"><Font ss:Bold="1" ss:Color="#375623" ss:Size="9"/><Alignment ss:Horizontal="Left" ss:Vertical="Center"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
+  </Styles>`;
+
+  const mergeAcross = cabecalho.length - 1;
+  const titulo = `<Row ss:Height="22"><Cell ss:MergeAcross="${mergeAcross}" ss:StyleID="t"><Data ss:Type="String">HOSPITAL MUNICIPAL DE CORDEIRO – ${sheetNome.toUpperCase()}</Data></Cell></Row>`;
+  const subTitulo = `<Row ss:Height="16"><Cell ss:MergeAcross="${mergeAcross}" ss:StyleID="t"><Data ss:Type="String">Emitido em: ${HOJE.toLocaleDateString('pt-BR')} | Prima Qualitá – CG nº 196/2025</Data></Cell></Row>`;
+  const hdr = `<Row ss:Height="28">${cabecalho.map(h=>`<Cell ss:StyleID="h"><Data ss:Type="String">${xlsEsc(h)}</Data></Cell>`).join('')}</Row>`;
+
+  const linhas = dados.map((row,i)=>{
+    const st = cores ? cores[i] : (i%2===0?'d':'o');
+    return `<Row ss:Height="16">${row.map(v=>`<Cell ss:StyleID="${st}"><Data ss:Type="String">${xlsEsc(v)}</Data></Cell>`).join('')}</Row>`;
+  }).join('');
+
+  const colW = cabecalho.map((_,i)=>`<Column ss:Width="${[200,280,120,100,100,80,120][i]||100}"/>`).join('');
+
+  const xml=`<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+  ${estilos}
+  <Worksheet ss:Name="${xlsEsc(sheetNome)}">
+    <Table>${colW}${titulo}${subTitulo}${hdr}${linhas}</Table>
+  </Worksheet>
+</Workbook>`;
+
+  const blob=new Blob([xml],{type:'application/vnd.ms-excel;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=nomeArq+'.xls';a.click();
+  URL.revokeObjectURL(url);
+  toast(`${nomeArq}.xls baixado com sucesso!`,'success');
+}
+
+// Atestados por mês de referência
+window.gerarAtestadosMesRef=async function(mes,ano){
+  const rows=await rhGet('atestados').catch(()=>[]);
+  const doMes=rows.filter(a=>{
+    if(!a.data)return false;
+    const p=a.data.split('/');
+    if(p.length<3)return false;
+    const d=new Date(+p[2],+p[1]-1,+p[0]);
+    return d.getMonth()===mes&&d.getFullYear()===ano;
+  });
+  const mesNome=MESES_NOME[mes];
+  const cab=['Departamento / Setor','Nome Colaborador','Qtd. Dias','Data Inicial','Data Final','CID','Envio ao DP'];
+  const dados=doMes.map(a=>[
+    'HOSPITAL DE CORDEIRO',
+    nomeColab(a.colaborador_id).toUpperCase(),
+    a.dias||'',a.data||'',a.data||'',a.cid||'',
+    new Date().toLocaleDateString('pt-BR')
+  ]);
+  gerarXLS(`Controle_Atestados_HMC_${mesNome}_${ano}`,`Atestados ${mesNome}/${ano}`,cab,dados);
+};
+
+// Férias
+window.gerarRelFerias=function(filtro){
+  const ativos=DB.filter(c=>c.ativo);
+  const cab=['Contrato','Nome','Função','Setor','Período Aquisitivo','Saldo','Início Gozo','Término Gozo','Data Limite','Status'];
+  const dados=[];const cores=[];
+  ativos.forEach(c=>{
+    c.periodos.forEach(p=>{
+      const st=p.programacao?(p.status_calc||'PROGRAMADO'):calcStatus(p);
+      if(filtro==='criticos'&&!['VENCIDO','URGENTE'].includes(st))return;
+      if(filtro==='programados'&&!['PROGRAMADO','EM ANDAMENTO','CONCLUÍDO'].includes(st))return;
+      dados.push([c.id,c.nome,c.funcao,c.depto,p.pa,p.saldo+'d',
+        p.programacao?.inicio||'',p.programacao?.fim||'',p.limite,st]);
+      cores.push(st==='VENCIDO'?'r':st==='PROGRAMADO'||st==='CONCLUÍDO'?'g':dados.length%2===0?'d':'o');
+    });
+  });
+  gerarXLS(`Relatorio_Ferias_HMC_${HOJE.toLocaleDateString('pt-BR').replace(/\//g,'-')}`,
+    filtro==='criticos'?'Férias Críticas':filtro==='programados'?'Férias Programadas':'Programação de Férias',
+    cab,dados,cores);
+};
+
+// Colaboradores
+window.gerarRelColaboradores=function(filtro){
+  let lista=filtro==='ativos'?DB.filter(c=>c.ativo):DB;
+  if(filtro==='setor') lista=[...lista].sort((a,b)=>a.depto.localeCompare(b.depto));
+  const cab=['Contrato','Nome','Função','Setor','Admissão','CPF','Situação'];
+  const dados=lista.map(c=>[c.id,c.nome,c.funcao,c.depto,c.admissao,c.cpf||'',c.ativo?'Ativo':'Desligado']);
+  const cores=lista.map((_,i)=>i%2===0?'d':'o');
+  gerarXLS(`Colaboradores_HMC_${HOJE.toLocaleDateString('pt-BR').replace(/\//g,'-')}`,
+    'Colaboradores',cab,dados,cores);
+};
+
+// ASO
+window.gerarRelAso=async function(){
+  const rows=await rhGet('asos').catch(()=>[]);
+  const cab=['Colaborador','Tipo','Data Realização','Próximo ASO','Resultado','Status'];
+  const dados=rows.map(r=>{
+    const d=diasAteDate(r.prox);
+    const st=d===null?'—':d<0?'VENCIDO':d<=30?'VENCE EM '+d+'d':'EM DIA';
+    return[nomeColab(r.colaborador_id),r.tipo||'',r.data||'',r.prox||'',r.resultado||'',st];
+  });
+  const cores=rows.map(r=>{const d=diasAteDate(r.prox);return d!==null&&d<0?'r':d!==null&&d<=30?'o':'d';});
+  gerarXLS(`ASO_HMC_${HOJE.toLocaleDateString('pt-BR').replace(/\//g,'-')}`,'ASO – Exames Ocupacionais',cab,dados,cores);
+};
+
+// Vacinas
+window.gerarRelVacinas=async function(){
+  const rows=await rhGet('vacinas').catch(()=>[]);
+  const cab=['Colaborador','Vacina','Dose','Data Aplicação','Próxima Dose','Lote'];
+  const dados=rows.map(r=>[nomeColab(r.colaborador_id),r.vacina||'',r.dose||'',r.data||'',r.prox||'',r.lote||'']);
+  gerarXLS(`Vacinas_HMC_${HOJE.toLocaleDateString('pt-BR').replace(/\//g,'-')}`,'Vacinas',cab,dados);
+};
+
+// Licenças
+window.gerarRelLicencas=async function(filtro){
+  const rows=await rhGet('licencas').catch(()=>[]);
+  const lista=filtro==='ativas'?rows.filter(l=>!l.fim):rows;
+  const cab=['Colaborador','Tipo','Início','Término','Retorno','Situação'];
+  const dados=lista.map(l=>[nomeColab(l.colaborador_id),l.tipo||'',l.inicio||'',l.fim||'Em andamento',l.retorno||'',l.fim?'Encerrada':'Ativa']);
+  const cores=lista.map(l=>!l.fim?'r':'d');
+  gerarXLS(`Licencas_HMC_${HOJE.toLocaleDateString('pt-BR').replace(/\//g,'-')}`,
+    filtro==='ativas'?'Licenças Ativas':'Licenças e Afastamentos',cab,dados,cores);
+};
+
+// Movimentações
+window.gerarRelMovimentacoes=async function(filtroMot){
+  const rows=await rhGet('movimentacoes').catch(()=>[]);
+  const MLABEL={ferias:'Férias',transferencia:'Transferência',promocao:'Promoção',
+    mudanca_turno:'Mudança de Turno',enquadramento:'Enquadramento',alteracao_funcao:'Alt. Função',
+    aumento_carga:'Aumento de Carga',reducao_carga:'Redução de Carga',demissao:'Demissão',outros:'Outros'};
+  const lista=filtroMot?rows.filter(r=>r.motivo===filtroMot):rows;
+  const cab=['Data','Colaborador','Motivo','Período/Detalhe','Observações'];
+  const dados=lista.map(r=>[
+    r.data_alteracao||'',nomeColab(r.colaborador_id),MLABEL[r.motivo]||r.motivo,
+    r.ferias_periodo_concessivo||r.area_destino||r.cargo_proposto||r.desl_tipo||'',
+    r.observacoes||''
+  ]);
+  gerarXLS(`Movimentacoes_HMC_${HOJE.toLocaleDateString('pt-BR').replace(/\//g,'-')}`,
+    filtroMot?`Movimentações – ${MLABEL[filtroMot]||filtroMot}`:'Movimentações de Pessoal',cab,dados);
 };
 
 // ─── SEED MANUAL ─────────────────────────────────────────────────────
