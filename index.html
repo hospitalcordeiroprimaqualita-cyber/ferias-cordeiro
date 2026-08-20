@@ -200,6 +200,7 @@ tr:hover td{background:#FAFCFF}
   .content{padding:0}
 }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
 
@@ -932,7 +933,7 @@ function renderPainel(){
 
   // Mostrar dashboard imediatamente com dados do DB
   // Tabelas RH carregam em paralelo e atualizam
-  buildDashboard([],[],[],[],[],[]);
+  buildDashboard([],[],[],[],[],[],[]);
   Promise.all([
     rhGet('licencas').catch(()=>[]),
     rhGet('asos').catch(()=>[]),
@@ -940,12 +941,14 @@ function renderPainel(){
     rhGet('movimentacoes').catch(()=>[]),
     rhGet('vacinas').catch(()=>[]),
     rhGet('registros_profissionais').catch(()=>[]),
-  ]).then(([licencas,asos,atestados,movs,vacinas,regs])=>{
-    buildDashboard(licencas,asos,atestados,movs,vacinas,regs);
+    rhGet('vagas_recrutamento').catch(()=>[]),
+  ]).then(([licencas,asos,atestados,movs,vacinas,regs,vagas])=>{
+    buildDashboard(licencas,asos,atestados,movs,vacinas,regs,vagas);
   });
 }
 
-function buildDashboard(licencas,asos,atestados,movs,vacinas,regs){
+function buildDashboard(licencas,asos,atestados,movs,vacinas,regs,vagas){
+  vagas = vagas || [];
   const content = document.getElementById('content');
   const ativos = DB.filter(c=>c.ativo);
   const total = ativos.length;
@@ -1073,6 +1076,26 @@ function buildDashboard(licencas,asos,atestados,movs,vacinas,regs){
     </div>`).join('');
   }
 
+  // ── GERENCIAL: Quadro Real vs Autorizado ────────────────────────────
+  const AUTORIZADO_TOTAL = 85; // Contrato de Gestão nº 196/2024
+  const trabalhandoAgora = total - licAtivas;
+  const afastadosAgora = licAtivas;
+  const pctQuadro = Math.min(100, Math.round((total/AUTORIZADO_TOTAL)*100));
+  const deficitQuadro = AUTORIZADO_TOTAL - total; // positivo = abaixo do teto, negativo = acima
+
+  // ── GERENCIAL: Vagas em Recrutamento ────────────────────────────────
+  const vagasAbertas = vagas.filter(v=>v.status!=='Preenchida'&&v.status!=='Cancelada');
+  const vagasUrgentes = vagasAbertas.filter(v=>calcDiasAberta(v.data_abertura)>PRAZO_TOTAL_IDEAL);
+  const vagasPreenchidas = vagas.filter(v=>v.status==='Preenchida');
+  const tempoMedioContratacao = vagasPreenchidas.length>0
+    ? Math.round(vagasPreenchidas.reduce((s,v)=>s+(v.dias_ate_fechamento||0),0)/vagasPreenchidas.length)
+    : 0;
+
+  // ── GERENCIAL: Turnover últimos 12 meses ────────────────────────────
+  const umAnoAtras = new Date(HOJE); umAnoAtras.setFullYear(umAnoAtras.getFullYear()-1);
+  const desligados12m = DB.filter(c=>c.desligamento && parseDate(c.desligamento) >= umAnoAtras).length;
+  const turnoverPct = total>0 ? ((desligados12m/total)*100) : 0;
+
   const COR_FERIAS=['#C00000','#FF9900','#375623','#7030A0','#BFBFBF'];
   const dadosFerias=[
     {l:'Vencidas',v:fVencidas},{l:'Urgentes',v:fUrgentes},
@@ -1081,6 +1104,96 @@ function buildDashboard(licencas,asos,atestados,movs,vacinas,regs){
   const CORES_MOV=['#1F4E79','#2E75B6','#70AD47','#FF9900','#C00000','#7030A0','#00B050','#BF8F00'];
 
   content.innerHTML=`
+  <!-- Toggle Gerencial / Operacional -->
+  <div style="display:flex;gap:8px;margin-bottom:18px">
+    <button class="btn btn-primary" id="tab-gerencial" onclick="togglePainelDash('gerencial')">📊 Visão Gerencial</button>
+    <button class="btn" id="tab-operacional" onclick="togglePainelDash('operacional')">🗂️ Visão Operacional</button>
+  </div>
+
+  <!-- ══════════════════ PAINEL GERENCIAL ══════════════════ -->
+  <div id="painel-gerencial">
+
+    <div class="dash-grid-2" style="align-items:start">
+      <div class="chart-card">
+        <h3>👥 Quadro Real <span>vs. Autorizado (Contrato 196/2024)</span></h3>
+        <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:10px">
+          <div style="font-size:32px;font-weight:800;color:${total>AUTORIZADO_TOTAL?'var(--vermelho)':'var(--azul)'}">${total}</div>
+          <div style="font-size:14px;color:var(--texto2)">de ${AUTORIZADO_TOTAL} autorizados</div>
+        </div>
+        <div style="background:var(--borda);border-radius:8px;height:16px;overflow:hidden;display:flex;position:relative">
+          <div style="width:${Math.min(100,(trabalhandoAgora/AUTORIZADO_TOTAL)*100)}%;background:var(--azul);height:100%" title="Trabalhando: ${trabalhandoAgora}"></div>
+          <div style="width:${Math.min(100-(trabalhandoAgora/AUTORIZADO_TOTAL)*100,(afastadosAgora/AUTORIZADO_TOTAL)*100)}%;background:var(--roxo);height:100%" title="Afastados: ${afastadosAgora}"></div>
+          ${total>AUTORIZADO_TOTAL?`<div style="position:absolute;left:100%;top:-4px;bottom:-4px;width:2px;background:var(--vermelho)"></div>`:''}
+        </div>
+        <div style="display:flex;gap:16px;margin-top:10px;font-size:12px">
+          <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:var(--azul);display:inline-block"></span>Trabalhando: <strong>${trabalhandoAgora}</strong></span>
+          <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:var(--roxo);display:inline-block"></span>Afastados: <strong>${afastadosAgora}</strong></span>
+        </div>
+        <div style="margin-top:10px;font-size:12.5px;color:${deficitQuadro<0?'var(--vermelho)':'var(--texto2)'}">
+          ${deficitQuadro<0
+            ? `⚠️ ${Math.abs(deficitQuadro)} acima do teto autorizado`
+            : `${deficitQuadro} vagas ainda dentro do teto autorizado`}
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <h3>📋 Vagas em Recrutamento <span>${vagasAbertas.length} abertas</span></h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:6px">
+          <div style="text-align:center;padding:12px 6px;background:var(--fundo);border-radius:var(--radius);border:1px solid var(--borda)">
+            <div style="font-size:24px;font-weight:700;color:var(--azul)">${vagasAbertas.length}</div>
+            <div style="font-size:10.5px;color:var(--texto2);margin-top:2px">Abertas</div>
+          </div>
+          <div style="text-align:center;padding:12px 6px;background:var(--fundo);border-radius:var(--radius);border:1px solid var(--borda)">
+            <div style="font-size:24px;font-weight:700;color:var(--vermelho)">${vagasUrgentes.length}</div>
+            <div style="font-size:10.5px;color:var(--texto2);margin-top:2px">Acima de ${PRAZO_TOTAL_IDEAL}d</div>
+          </div>
+          <div style="text-align:center;padding:12px 6px;background:var(--fundo);border-radius:var(--radius);border:1px solid var(--borda)">
+            <div style="font-size:24px;font-weight:700;color:var(--verde)">${tempoMedioContratacao}</div>
+            <div style="font-size:10.5px;color:var(--texto2);margin-top:2px">Dias médios p/ contratar</div>
+          </div>
+        </div>
+        <div style="text-align:right"><a href="#" onclick="goPage('vagas',document.querySelector('[data-page=vagas]'));return false" style="font-size:12px;color:var(--azul-m)">Ver todas as vagas →</a></div>
+      </div>
+    </div>
+
+    <div class="dash-grid-2" style="align-items:start">
+      <div class="chart-card">
+        <h3>🔄 Turnover <span>últimos 12 meses</span></h3>
+        <div style="display:flex;align-items:baseline;gap:8px">
+          <div style="font-size:32px;font-weight:800;color:${turnoverPct>15?'var(--vermelho)':turnoverPct>8?'#BF8F00':'var(--verde)'}">${turnoverPct.toFixed(1).replace('.',',')}%</div>
+          <div style="font-size:12.5px;color:var(--texto2)">${desligados12m} desligamento(s) / ${total} colaboradores</div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h3>🛡️ Afastamentos Ativos <span>${licAtivasList.length}</span></h3>
+        ${licAtivasList.length===0
+          ?'<div style="text-align:center;padding:20px;color:var(--texto2);font-size:13px">✅ Nenhum afastamento ativo</div>'
+          :`<div class="dash-list">${licAtivasList.slice(0,5).map(l=>`
+          <div class="dash-list-item">
+            <div class="avatar">${l.nome.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
+            <div class="name" style="margin-left:8px">${l.nome.split(' ').slice(0,2).join(' ')}</div>
+            <div class="right"><span class="badge badge-purple">${(l.tipo||'').split(' ').slice(0,2).join(' ')}</span></div>
+          </div>`).join('')}</div>`}
+      </div>
+    </div>
+
+    <div class="chart-card" style="margin-bottom:20px">
+      <h3>💰 Custo da Falta de Contratação <span>horas extras</span></h3>
+      <div id="he-upload-zone" style="border:2px dashed var(--borda);border-radius:10px;padding:20px;text-align:center">
+        <p style="margin:0 0 10px;font-size:13px;color:var(--texto2)">Envie a Folha de Pagamento Alfabética (PDF) do mês para calcular o custo de horas extras por cargo.</p>
+        <label class="btn btn-primary" for="he-arquivo" style="cursor:pointer">Escolher PDF da folha</label>
+        <input type="file" id="he-arquivo" accept="application/pdf" style="display:none" onchange="processarFolhaHE(this.files[0])">
+        <div id="he-status" style="margin-top:10px;font-size:12.5px;color:var(--texto2)"></div>
+      </div>
+      <div id="he-resultado" style="display:none;margin-top:16px"></div>
+      <div id="he-historico" style="margin-top:16px"></div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════ PAINEL OPERACIONAL ══════════════════ -->
+  <div id="painel-operacional" style="display:none">
+
   <!-- KPIs linha 1 -->
   <div class="dash-grid">
     <div class="kpi-card">
@@ -1265,9 +1378,264 @@ function buildDashboard(licencas,asos,atestados,movs,vacinas,regs){
         </div>
       </div>
     </div>
-  </div>`;
+  </div>
+
+  </div><!-- /painel-operacional -->
+  `;
 
   updateCounts();
+  carregarHistoricoHE();
+}
+
+// ─── TOGGLE PAINEL GERENCIAL / OPERACIONAL ────────────────────────────
+function togglePainelDash(qual){
+  const ger = document.getElementById('painel-gerencial');
+  const ope = document.getElementById('painel-operacional');
+  const btnG = document.getElementById('tab-gerencial');
+  const btnO = document.getElementById('tab-operacional');
+  if(!ger||!ope) return;
+  if(qual==='gerencial'){
+    ger.style.display='block'; ope.style.display='none';
+    btnG.className='btn btn-primary'; btnO.className='btn';
+  } else {
+    ger.style.display='none'; ope.style.display='block';
+    btnG.className='btn'; btnO.className='btn btn-primary';
+  }
+}
+
+// ─── MÓDULO: CUSTO DA FALTA DE CONTRATAÇÃO (Horas Extras) ─────────────
+if(window.pdfjsLib){
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+function heParseNum(s){ return parseFloat(s.replace(/\./g,'').replace(',','.')); }
+
+async function heExtrairTextoPDF(arrayBuffer){
+  const pdf = await pdfjsLib.getDocument({data:arrayBuffer}).promise;
+  let textoCompleto = '';
+  for(let p=1;p<=pdf.numPages;p++){
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    const linhas = [];
+    content.items.forEach(item=>{
+      const y = Math.round(item.transform[5]);
+      let linha = linhas.find(l=>Math.abs(l.y-y)<=2);
+      if(!linha){ linha={y,itens:[]}; linhas.push(linha); }
+      linha.itens.push({x:item.transform[4], str:item.str});
+    });
+    linhas.sort((a,b)=>b.y-a.y);
+    linhas.forEach(l=>l.itens.sort((a,b)=>a.x-b.x));
+    linhas.forEach(l=>{
+      let linhaTexto='', ultimoFimX=null;
+      l.itens.forEach(it=>{
+        if(ultimoFimX!==null){
+          const gap = it.x - ultimoFimX;
+          linhaTexto += gap>8 ? '   ' : (gap>1.5 ? ' ' : '');
+        }
+        linhaTexto += it.str;
+        ultimoFimX = it.x + it.str.length*4.5;
+      });
+      textoCompleto += linhaTexto + '\n';
+    });
+    textoCompleto += '\n';
+  }
+  return textoCompleto;
+}
+
+function heParseFolha(texto){
+  const corte = texto.split(/Total do\(a\)/)[0];
+  const linhas = corte.split('\n');
+  const blocos = []; let atual = [];
+  const regexCabecalho = /^(\d{3,6})\s+([A-Za-zÀ-ÿ\s]+)$/;
+  linhas.forEach(linha=>{
+    const l = linha.trim();
+    if(regexCabecalho.test(l)){
+      if(atual.length) blocos.push(atual.join('\n'));
+      atual = [linha];
+    } else { atual.push(linha); }
+  });
+  if(atual.length) blocos.push(atual.join('\n'));
+
+  const registros = [];
+  blocos.forEach(b=>{
+    const mNome = b.match(/^\s*(\d{3,6})\s+([A-Za-zÀ-ÿ\s]+)$/m);
+    if(!mNome) return;
+    const mCargo = b.match(/Cargo\.+\s*([A-Za-zÀ-ÿ()\s]+?)(?:\s{2,}|\d|$)/);
+    const cargo = mCargo ? mCargo[1].trim() : 'Sem cargo identificado';
+    const mOt50 = b.match(/04050\s*Horas Extras 50%\s+([\d.,]+)\s+([\d.,]+)/);
+    const mOt100 = b.match(/04100\s*Horas Extras 100%\s+([\d.,]+)\s+([\d.,]+)/);
+    const h50 = mOt50?heParseNum(mOt50[1]):0, v50 = mOt50?heParseNum(mOt50[2]):0;
+    const h100 = mOt100?heParseNum(mOt100[1]):0, v100 = mOt100?heParseNum(mOt100[2]):0;
+    registros.push({cargo, horas:h50+h100, valor:v50+v100});
+  });
+
+  const mSalarioMedio = texto.match(/Salário Médio\s+([\d.,]+)/);
+  const salarioMedio = mSalarioMedio ? heParseNum(mSalarioMedio[1]) : null;
+  const mMes = texto.match(/Folha Mensal de (\d{2})\/(\d{2})\/(\d{4})/);
+  const mesRef = mMes ? `${mMes[3]}-${mMes[2]}-01` : null;
+
+  return {registros, salarioMedio, mesRef};
+}
+
+function heAgregarPorCargo(registros){
+  const agg = {};
+  registros.forEach(r=>{
+    if(r.valor<=0) return;
+    if(!agg[r.cargo]) agg[r.cargo] = {cargo:r.cargo, valor:0, horas:0, qtd:0};
+    agg[r.cargo].valor += r.valor;
+    agg[r.cargo].horas += r.horas;
+    agg[r.cargo].qtd += 1;
+  });
+  return Object.values(agg).sort((a,b)=>b.valor-a.valor);
+}
+
+function heFormatBRL(v){ return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+
+let heDadosProcessados = null;
+
+async function processarFolhaHE(arquivo){
+  if(!arquivo) return;
+  const status = document.getElementById('he-status');
+  status.style.color = 'var(--texto2)';
+  status.textContent = 'Lendo e processando o PDF...';
+  try{
+    const buffer = await arquivo.arrayBuffer();
+    const texto = await heExtrairTextoPDF(buffer);
+    const parsed = heParseFolha(texto);
+    if(!parsed.registros.length){
+      status.style.color='var(--vermelho)';
+      status.textContent='Não encontrei funcionários reconhecíveis. Confirme se é a Folha de Pagamento Alfabética.';
+      return;
+    }
+    status.style.color='var(--verde)';
+    status.textContent=`Processado: ${parsed.registros.length} funcionários lidos.`;
+    heRenderResultado(parsed);
+  }catch(e){
+    status.style.color='var(--vermelho)';
+    status.textContent='Erro ao processar o PDF: '+e.message;
+  }
+}
+
+function heRenderResultado(parsed){
+  const porCargo = heAgregarPorCargo(parsed.registros);
+  const valorTotal = porCargo.reduce((s,c)=>s+c.valor,0);
+  const horasTotal = porCargo.reduce((s,c)=>s+c.horas,0);
+  const salarioMedio = parsed.salarioMedio || 0;
+  const postos = salarioMedio>0 ? valorTotal/salarioMedio : null;
+
+  heDadosProcessados = {mesRef:parsed.mesRef, valorTotal, horasTotal, salarioMedio, postos, porCargo, totalFuncionarios:parsed.registros.length};
+
+  const maxValor = porCargo.length ? porCargo[0].valor : 1;
+  const mesLabel = parsed.mesRef
+    ? new Date(parsed.mesRef+'T00:00:00').toLocaleDateString('pt-BR',{month:'long',year:'numeric'})
+    : 'mês não identificado';
+
+  const el = document.getElementById('he-resultado');
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div style="font-size:12.5px;color:var(--texto2);margin-bottom:10px;text-transform:capitalize">Referência: ${mesLabel}</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+      <div style="text-align:center;padding:14px;background:var(--vermelho-c);border-radius:var(--radius)">
+        <div style="font-size:22px;font-weight:800;color:var(--vermelho)">${heFormatBRL(valorTotal)}</div>
+        <div style="font-size:10.5px;color:var(--texto2);margin-top:4px">gasto em horas extras</div>
+      </div>
+      <div style="text-align:center;padding:14px;background:var(--fundo);border-radius:var(--radius);border:1px solid var(--borda)">
+        <div style="font-size:22px;font-weight:800;color:var(--azul)">${postos!==null?postos.toFixed(1).replace('.',','):'—'}</div>
+        <div style="font-size:10.5px;color:var(--texto2);margin-top:4px">postos equivalentes</div>
+      </div>
+      <div style="text-align:center;padding:14px;background:var(--fundo);border-radius:var(--radius);border:1px solid var(--borda)">
+        <div style="font-size:22px;font-weight:800;color:var(--texto)">${horasTotal.toLocaleString('pt-BR',{maximumFractionDigits:1})}h</div>
+        <div style="font-size:10.5px;color:var(--texto2);margin-top:4px">horas extras no mês</div>
+      </div>
+    </div>
+    <div style="font-size:12px;font-weight:600;color:var(--texto2);margin-bottom:8px">Onde o custo está concentrado:</div>
+    ${porCargo.map(c=>{
+      const pct = Math.max(4,(c.valor/maxValor)*100);
+      const risco = c.qtd===1 ? '<span class="badge badge-red" style="margin-left:6px">SEM BACKUP</span>' : '';
+      return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0">
+        <div style="flex:0 0 180px;font-size:12.5px;font-weight:600">${c.cargo}${risco}</div>
+        <div style="flex:1;background:var(--borda);border-radius:6px;height:9px;overflow:hidden"><div style="width:${pct}%;height:100%;background:var(--azul)"></div></div>
+        <div style="flex:0 0 85px;text-align:right;font-size:12.5px;font-weight:700">${heFormatBRL(c.valor)}</div>
+      </div>`;
+    }).join('')}
+    <div style="margin-top:14px">
+      <button class="btn btn-primary" onclick="salvarHENoSupabase()">Salvar este mês</button>
+    </div>
+    <div id="he-status-salvar" style="margin-top:8px;font-size:12px"></div>
+  `;
+}
+
+async function salvarHENoSupabase(){
+  const statusEl = document.getElementById('he-status-salvar');
+  if(!heDadosProcessados || !heDadosProcessados.mesRef){
+    statusEl.style.color='var(--vermelho)';
+    statusEl.textContent='Não foi possível identificar o mês da folha — salvamento cancelado.';
+    return;
+  }
+  try{
+    await fetch(`${SUPA_URL}/rest/v1/custos_extras_resumo_mensal`,{
+      method:'POST', headers:{...supaHeaders(),'Prefer':'resolution=merge-duplicates,return=representation'},
+      body: JSON.stringify([{
+        mes_ref: heDadosProcessados.mesRef,
+        valor_total: heDadosProcessados.valorTotal,
+        horas_total: heDadosProcessados.horasTotal,
+        salario_medio: heDadosProcessados.salarioMedio,
+        postos_equivalentes: heDadosProcessados.postos,
+        total_funcionarios: heDadosProcessados.totalFuncionarios
+      }])
+    });
+    const linhasCargo = heDadosProcessados.porCargo.map(c=>({
+      mes_ref: heDadosProcessados.mesRef, cargo: c.cargo,
+      valor_total: c.valor, horas_total: c.horas, qtd_pessoas: c.qtd
+    }));
+    await fetch(`${SUPA_URL}/rest/v1/custos_extras_por_cargo`,{
+      method:'POST', headers:{...supaHeaders(),'Prefer':'resolution=merge-duplicates,return=representation'},
+      body: JSON.stringify(linhasCargo)
+    });
+    statusEl.style.color='var(--verde)';
+    statusEl.textContent='Mês salvo com sucesso.';
+    carregarHistoricoHE();
+  }catch(e){
+    statusEl.style.color='var(--vermelho)';
+    statusEl.textContent='Erro ao salvar: '+e.message;
+  }
+}
+
+async function carregarHistoricoHE(){
+  const container = document.getElementById('he-historico');
+  if(!container) return;
+  try{
+    const r = await fetch(`${SUPA_URL}/rest/v1/custos_extras_resumo_mensal?select=mes_ref,valor_total&order=mes_ref.asc`,{headers:supaHeaders()});
+    if(!r.ok){ container.innerHTML=''; return; }
+    const dados = await r.json();
+    if(!Array.isArray(dados) || dados.length===0){
+      container.innerHTML = '<div style="font-size:12px;color:var(--texto2);text-align:center;padding:10px 0">Nenhum mês salvo ainda. Processe e salve uma folha para começar o histórico.</div>';
+      return;
+    }
+    heRenderTrendSVG(container, dados);
+  }catch(e){ container.innerHTML=''; }
+}
+
+function heRenderTrendSVG(container, dados){
+  const w=800,h=130,pad=30;
+  const max=Math.max(...dados.map(d=>d.valor_total),1);
+  const stepX=(w-pad*2)/Math.max(dados.length-1,1);
+  const pontos = dados.map((d,i)=>{
+    const x = pad+i*stepX;
+    const y = h-pad-(d.valor_total/max)*(h-pad*2);
+    return {x,y,valor:d.valor_total,mes:d.mes_ref};
+  });
+  const linha = pontos.map((p,i)=>(i===0?'M':'L')+p.x+','+p.y).join(' ');
+  let svg = `<div style="font-size:12px;font-weight:600;color:var(--texto2);margin-bottom:6px">Tendência de custo com horas extras</div>
+    <svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}">
+    <line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="var(--borda)" stroke-width="1"/>
+    <path d="${linha}" fill="none" stroke="var(--azul)" stroke-width="2.5"/>`;
+  pontos.forEach(p=>{
+    svg += `<circle cx="${p.x}" cy="${p.y}" r="4" fill="var(--verde)"/>`;
+    svg += `<text x="${p.x}" y="${h-10}" font-size="10" fill="#888" text-anchor="middle">${p.mes.slice(5,7)}/${p.mes.slice(0,4)}</text>`;
+  });
+  svg += `</svg>`;
+  container.innerHTML = svg;
 }
 
 
