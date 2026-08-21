@@ -1093,7 +1093,14 @@ function buildDashboard(licencas,asos,atestados,movs,vacinas,regs,vagas){
 
   // ── GERENCIAL: Turnover últimos 12 meses ────────────────────────────
   const umAnoAtras = new Date(HOJE); umAnoAtras.setFullYear(umAnoAtras.getFullYear()-1);
-  const desligados12m = DB.filter(c=>c.desligamento && parseDate(c.desligamento) >= umAnoAtras).length;
+  const desligados12m = DB.filter(c=>{
+    if(!c.desligamento) return false;
+    let d = null;
+    if(c.desligamento instanceof Date) d = c.desligamento;
+    else if(typeof c.desligamento === 'string') d = parseDate(c.desligamento);
+    if(!d || isNaN(d.getTime())) return false;
+    return d >= umAnoAtras;
+  }).length;
   const turnoverPct = total>0 ? ((desligados12m/total)*100) : 0;
 
   const COR_FERIAS=['#C00000','#FF9900','#375623','#7030A0','#BFBFBF'];
